@@ -1,146 +1,219 @@
 #include <iostream>
-#include <mpi.h>
+#include <ctime>
+#include <omp.h>
 #include <queue>
-
 using namespace std;
 
-int main(int argc, char* argv[])
+void HoaraSort(int *a, int first, int last)
 {
-    MPI_Init(&argc, &argv);
-    int n = 100000, m = 500;
-    double t1, t2, t3;
-    int ** a, *b, *c, *cmpi;
-    b = new int[m];
-    int False = -1, True = 1;
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Status status;
-    int req;
-    if(rank == 0)
+    queue<pair<int,int>>q;
+    q.push({first, last});
+    while(!q.empty())
     {
-        c = new int[n];
-        cmpi = new int[n];
-        a = new int*[n];
-        a[0] = new int[n*m];
-        for(int i = 1; i < n; i++)
-            a[i] = a[0] + m*i;
-        int t = 1;
-        for(int i = 0; i < n; i++)
+        pair<int, int> cur = q.front();
+        q.pop();
+        int i = cur.first, j = cur.second, x = a[(cur.first+cur.second)/2];
+        if(i-j >= 0 && i-j < 50)
         {
-            for(int j = 0; j < m; j++)
-                a[i][j] = t++;
-            c[i] = cmpi[i] = 0;
+            for(int k = i; k < j; k++)
+            {
+                for(int l = k+1; l < j; l++)
+                {
+                    if(a[k]>a[l])
+                        swap(a[k], a[l]);
+                }
+            }
+            continue;
         }
-        t = m;
-        for(int i = 0; i < m; i++)
-            b[i] = t--;
-        //NON PARALLEL PROGRAM
-        t1 = MPI_Wtime();
-        for(int i = 0; i < n; i++)
-            for(int j = 0; j < m; j++)
-                c[i]+=a[i][j]*b[j];
-        t2 = MPI_Wtime();
-        //END OF NON PARALLEL PROGRAM
+        while(i <= j)
+        {
+            while(a[i] < x)
+                i++;
+            while(a[j] > x)
+                j--;
+            if(i <= j)
+            {
+                if(i < j)
+                    swap(a[i], a[j]);
+                i++;
+                j--;
+            }
+        }
+        if(i < cur.second)
+            q.push({i, cur.second});
+        if(j > cur.first)
+            q.push({cur.first, j});
     }
-    if(size == 1)
-    {
-        for(int i = 0; i < n; i++)
-            for(int j = 0; j < m; j++)
-                cmpi[i]+=a[i][j]*b[j];
-        for(int i = 0; i < n; i++)
-        {
-            //cout<<c[i]<<" "<<cmpi[i]<<"\n";
-            if(c[i] != cmpi[i])
-            {
-                cout<<"ANSWERS ARE NOT EQUAL\n";
-                break;
-            }
-        }
-        MPI_Finalize();
-        return 0;
-    }
-    MPI_Bcast(b, m, MPI_INT, 0, MPI_COMM_WORLD);
-    if(!rank)
-    {
-        int *id;
-        id = new int[size];
-        int all = 0;
-        for(int i = 0; i < size-1; i++)
-        {
-            if(i<n)
-            {
-                MPI_Send(&True, 1, MPI_INT, i+1, 0, MPI_COMM_WORLD);
-                MPI_Send(a[i], m, MPI_INT, i+1, 0, MPI_COMM_WORLD);
-                id[i+1] = i;
-            }
-            else
-            {
-                MPI_Send(&False, 1, MPI_INT, i+1, 0, MPI_COMM_WORLD);
-                all++;
-            }
-        }
-        queue<int>q;
-        for(int i = size-1; i < n; i++)
-            q.push(i);
-        while(true)
-        {
-            MPI_Recv(&req, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            cmpi[id[status.MPI_SOURCE]] = req;
-            if(q.size())
-            {
-                int x = q.front();
-                MPI_Send(&True, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-                MPI_Send(a[x], m, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-                id[status.MPI_SOURCE] = x;
-                q.pop();
-            }
-            else
-            {
+}
 
-                MPI_Send(&False, 1, MPI_INT, status.MPI_SOURCE, 0, MPI_COMM_WORLD);
-                all++;
-            }
-            if(all == size-1)
-                break;
-        }
-        t3 = MPI_Wtime();
-        cout<<t2-t1<<" "<<t3-t2<<"\n";
-        for(int i = 0; i < n; i++)
-        {
-            //cout<<c[i]<<" "<<cmpi[i]<<"\n";
-            if(c[i] != cmpi[i])
-            {
-                cout<<"ANSWERS ARE NOT EQUAL\n";
-                break;
-            }
-        }
-        delete[] id;
-        delete[] c;
-        delete[] cmpi;
-        delete[] a[0];
-        delete[] a;
-    }
-    else
+void OmpHoaraSort(int *a, int first, int last)
+{
+    queue<pair<int,int>>q;
+    q.push({first, last});
+    while(!q.empty() && q.size() < omp_get_max_threads())
     {
-
-        int* aa = new int[m];
-        while(true)
+        pair<int, int> cur = q.front();
+        q.pop();
+        int i = cur.first, j = cur.second, x = a[(cur.first+cur.second)/2];
+        if(i-j >= 0 && i-j < 50)
         {
-            MPI_Recv(&req, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            if(req == -1)
-                break;
-            MPI_Recv(aa, m, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            int ans = 0;
-            for(int i = 0; i < m; i++)
+            for(int k = i; k < j; k++)
             {
-                ans += aa[i]*b[i];
+                for(int l = k+1; l < j; l++)
+                {
+                    if(a[k]>a[l])
+                        swap(a[k], a[l]);
+                }
             }
-            MPI_Send(&ans, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            continue;
         }
-        delete [] aa;
+        while(i <= j)
+        {
+            while(a[i] < x)
+                i++;
+            while(a[j] > x)
+                j--;
+            if(i <= j)
+            {
+                if(i < j)
+                    swap(a[i], a[j]);
+                i++;
+                j--;
+            }
+        }
+        if(i < cur.second)
+            q.push({i, cur.second});
+        if(j > cur.first)
+            q.push({cur.first, j});
     }
-    delete[] b;
-    MPI_Finalize();
+    #pragma omp parallel
+    {
+        queue<pair<int,int>>q2;
+        #pragma omp critical
+        {
+            q2.push(q.front());
+            q.pop();
+        }
+        while(!q2.empty())
+        {
+            pair<int, int> cur = q2.front();
+            q2.pop();
+            int i = cur.first, j = cur.second, x = a[(cur.first+cur.second)/2];
+            if(i-j >= 0 && i-j < 10)
+            {
+                for(int k = i; k < j; k++)
+                {
+                    for(int l = k+1; l < j; l++)
+                    {
+                        if(a[k]>a[l])
+                            swap(a[k], a[l]);
+                    }
+                }
+                continue;
+            }
+            while(i <= j)
+            {
+                while(a[i] < x)
+                    i++;
+                while(a[j] > x)
+                    j--;
+                if(i <= j)
+                {
+                    if(i < j)
+                        swap(a[i], a[j]);
+                    i++;
+                    j--;
+                }
+            }
+            if(i < cur.second)
+                q2.push({i, cur.second});
+            if(j > cur.first)
+                q2.push({cur.first, j});
+        }
+    }
+}
+
+void OmpTasksHoaraSort(int* a, int l, int r)
+{
+    int i = l, j = r, x = a[(l+r)/2];
+    if(i-j >= 0 && i-j < 50)
+    {
+        for(int k = i; k < j; k++)
+        {
+            for(int l = k+1; l < j; l++)
+            {
+                if(a[k]>a[l])
+                    swap(a[k], a[l]);
+            }
+        }
+        return;
+    }
+    while(i <= j)
+    {
+        while(a[i] < x)
+            i++;
+        while(a[j] > x)
+            j--;
+        if(i <= j)
+        {
+            if(i < j)
+                swap(a[i], a[j]);
+            i++;
+            j--;
+        }
+    }
+    #pragma omp task shared(a)
+    if(j > l)
+        OmpTasksHoaraSort(a, l, j);
+    #pragma omp task shared(a)
+    if(i < r)
+        OmpTasksHoaraSort(a, i, r);
+}
+
+int main()
+{
+    int n = 50000000;
+    int *a1, *a2, *a3;
+    a1 = new int[n];
+    a2 = new int[n];
+    a3 = new int[n];
+    srand(time(0));
+    for(int i = 0; i < n; i++)
+    {
+        a1[i] = 1 + rand()%10000;
+        a3[i] = a2[i] = a1[i];
+    }
+    double t1 = omp_get_wtime();
+    HoaraSort(a1, 0, n-1);
+    double t2 = omp_get_wtime();
+    cout<<t2-t1<<" <- Single Hoara Sort\n";
+    OmpHoaraSort(a2, 0, n-1);
+    double t3 = omp_get_wtime();
+    cout<<t3-t2<<" <- Multiple Hoara Sort\n";
+    #pragma omp parallel shared(a3)
+    {
+        #pragma omp single nowait
+        {
+            OmpTasksHoaraSort(a3, 0, n-1);
+        }
+    }
+    double t4 = omp_get_wtime();
+    cout<<t4-t3<<" <- Multiple Tasks Hoara Sort\n";
+//    for(int i = 0; i < n; i++)
+//    {
+//        if(a1[i] != a2[i])
+//            cout<<"multiple Hoara isn't correct\n";
+//        if(a3[i] != a2[i])
+//        {
+//            if(i && a3[i-1] < a3[i])
+//                cout<<"multiple tasks Hoara isn't correct\n";
+//        }
+//    }
+//    for(int i = 0; i < n; i++)
+//        cout<<a1[i]<<" "<<a2[i]<<"\n";
+//    cout<<"\n";
+    delete[] a1;
+    delete[] a2;
+    delete[] a3;
     return 0;
 }
