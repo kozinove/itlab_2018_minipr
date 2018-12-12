@@ -11,8 +11,11 @@ using namespace std;
 void quicksort(int* a,int size);
 // slightly slower than simple
 void parallel_quicksort(int* a,int size);
-// fastest
+// faster
 void very_quicksort(int* a,int size);
+// fastest
+void fast_quicksort(int* a,int size);
+void fast_qsort_iteration(int *a,int first,int last);
 
 int main(int argc,char** argv)
 {
@@ -26,11 +29,12 @@ int main(int argc,char** argv)
     int *a1=new int[size];
     int *a2=new int[size];
     int *a3=new int[size];
+    int *a4=new int[size];
     random_device ra;
     mt19937 rand(time(0));
     uniform_int_distribution<int> random(INT_MIN,INT_MAX);
     for (int i=0;i<size;++i)
-        a1[i]=a2[i]=a3[i]=random(rand);
+        a1[i]=a2[i]=a3[i]=a4[i]=random(rand);
 
     double t1=omp_get_wtime();
     quicksort(a1,size);
@@ -39,17 +43,20 @@ int main(int argc,char** argv)
     double t3=omp_get_wtime();
     very_quicksort(a3,size);
     double t4=omp_get_wtime();
+    fast_quicksort(a4,size);
+    double t5=omp_get_wtime();
 
     bool fl=0;
     for (int i=0;i<size;++i)
-        fl|=(a1[i]!=a2[i])|(a1[i]!=a3[i]);
+        fl|=(a1[i]!=a2[i])|(a1[i]!=a3[i])|(a1[i]!=a4[i]);
     if (fl)
         cout << "wrong\n";
     else
         cout << "correct\n";
     cout << "simple:   " << (t2-t1) << '\n';
     cout << "parallel: " << (t3-t2) << '\n';
-    cout << "fast:     " << (t4-t3) << '\n';
+    cout << "very:     " << (t4-t3) << '\n';
+    cout << "fast:     " << (t5-t4) << '\n';
 }
 
 void parallel_quicksort(int* a,int size)
@@ -124,6 +131,64 @@ void parallel_quicksort(int* a,int size)
     }
 }
 
+void fast_quicksort(int* a,int size)
+{
+    #pragma omp parallel shared (a,size)
+    {
+        #pragma omp single nowait
+        fast_qsort_iteration(a,0,size-1);
+    }
+}
+
+void fast_qsort_iteration(int* a,int first,int last)
+{
+    struct sort_com
+    {
+        int l,r;
+    };
+    sort_com t={first,last};
+
+    while (t.r-t.l>9)
+    {
+        int bel;
+        int mi=min(min(a[t.l],a[t.r]),a[(t.l+t.r)/2]);
+        int ma=min(min(a[t.l],a[t.r]),a[(t.l+t.r)/2]);
+        if ((a[t.l]>mi)&&(a[t.l]<ma))
+            bel=a[t.l];
+        else if ((a[t.r]>mi)&&(a[t.r]<ma))
+            bel=a[t.r];
+        else
+            bel=a[(t.l+t.r)/2];
+
+        int l=t.l,r=t.r;
+        while(l<=r)
+        {
+            while (a[l]<bel)
+                ++l;
+            while (a[r]>bel)
+                --r;
+            if (l<=r)
+                swap(a[l++],a[r--]);
+        }
+
+        #pragma omp task
+        {
+            fast_qsort_iteration(a,r+1,t.r);
+        }
+        t={t.l,r};
+    }
+
+    if (t.r-t.l<10)
+    {
+        for (int i=t.l;i<t.r;++i)
+            for (int j=i+1;j>t.l;--j)
+                if (a[j-1]>a[j])
+                    swap(a[j-1],a[j]);
+                else
+                    break;
+    }
+}
+
 void very_quicksort(int* a,int size)
 {
     struct sort_com
@@ -133,7 +198,8 @@ void very_quicksort(int* a,int size)
 
     queue<sort_com> q;
     q.push({0,size-1});
-    while ((q.size()>0)&&(q.size()<omp_get_max_threads()))
+    int n=omp_get_max_threads();
+    while ((q.size()>0)&&(q.size()<n))
     {
         sort_com t=q.front();
         q.pop();
@@ -178,8 +244,11 @@ void very_quicksort(int* a,int size)
         queue<sort_com> u;
         #pragma omp critical
         {
-            u.push(q.front());
-            q.pop();
+            if (q.size())
+            {
+                u.push(q.front());
+                q.pop();
+            }
         }
         while (u.size())
         {
