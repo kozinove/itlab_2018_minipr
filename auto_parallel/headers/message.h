@@ -12,11 +12,10 @@ namespace auto_parallel
 
     class message
     {
-    private:
-        data* d;
-        int id;
+    protected:
+        data* const d;
     public:
-        message();
+        message(data* const _d = nullptr);
         virtual ~message();
         virtual void send() = 0;
         virtual void recv() = 0;

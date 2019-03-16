@@ -3,6 +3,9 @@
 
 #include "basic_task.h"
 #include <vector>
+#include <map>
+#include <set>
+#include <algorithm>
 
 namespace auto_parallel
 {
@@ -10,25 +13,46 @@ namespace auto_parallel
     class task_graph
     {
     protected:
+        int base_task_id;
+        int base_data_id;
+
         struct d_id
         {
-            int id;
-            message* pm;
+            const int id;
+            int ref_count;
             int version;
+            d_id(const int nid = 0): id(nid)
+            {
+                version = 0;
+                ref_count = 0;
+            }
         };
+
         struct t_id
         {
-            int id;
-            task* pt;
-            int end_count;
+            const int id;
+            std::set<task*> childs;
+            std::set<task*> parents;
+            t_id(const int nid = 0): id(nid)
+            {
+
+            }
         };
-        std::vector<t_id> task_v;
-        std::vector<d_id> data_v;
+
+        std::map<task*, t_id> t_map;
+        std::map<message*, d_id> d_map;
+
     public:
         task_graph();
         task_graph(task_graph& _tg);
+
         void add_task(task* t);
         void add_data(message* m);
+        void add_dependence(task* parent, task* child);
+        void del_task(task* t);
+        void del_data(message* m);
+        void del_dependence(task* parent, task* child);
+        void change_task(task* old_t, task* new_t);
     };
 
 }

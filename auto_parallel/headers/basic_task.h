@@ -2,18 +2,22 @@
 #define __BASIC_TASK_H__
 
 #include "message.h"
+#include <vector>
 
 namespace auto_parallel
 {
 
     class task
     {
-    private:
-        int id;
+    protected:
+        std::vector<message*> data_v;
     public:
         task();
+        task(message* dat);
+        task(std::vector<message*>& mes_v);
         virtual ~task();
-        virtual task* perform(message* p) = 0;
+        virtual task* perform() = 0;
+        friend class task_graph;
     };
 
 }
