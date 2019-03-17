@@ -44,7 +44,8 @@ namespace auto_parallel
 
     public:
         task_graph();
-        task_graph(task_graph& _tg);
+        task_graph(const task_graph& _tg);
+        task_graph& operator =(const task_graph& _tg);
 
         void add_task(task* t);
         void add_data(message* m);
@@ -53,6 +54,10 @@ namespace auto_parallel
         void del_data(message* m);
         void del_dependence(task* parent, task* child);
         void change_task(task* old_t, task* new_t);
+
+        bool contain_task(task* t);
+        bool contain_data(message* m);
+        bool contain_dependence(task* parent, task* child);
     };
 
 }

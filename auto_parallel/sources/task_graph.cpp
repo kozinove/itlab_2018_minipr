@@ -8,12 +8,23 @@ namespace auto_parallel
         base_data_id = base_task_id = 0;
     }
 
-    task_graph::task_graph(task_graph& _tg)
+    task_graph::task_graph(const task_graph& _tg)
     {
         base_data_id = _tg.base_data_id;
         base_task_id = _tg.base_task_id;
         t_map = _tg.t_map;
         d_map = _tg.d_map;
+    }
+
+    task_graph& task_graph::operator =(const task_graph& _tg)
+    {
+        if (&_tg == this)
+            return *this;
+        base_data_id = _tg.base_data_id;
+        base_task_id = _tg.base_task_id;
+        t_map = _tg.t_map;
+        d_map = _tg.d_map;
+        return *this;
     }
 
     void task_graph::add_task(task* t)
@@ -125,6 +136,23 @@ namespace auto_parallel
                 d_map.insert(std::make_pair(i, d_id(base_data_id++)));
             ++d_map[i].ref_count;
         }
+    }
+
+    bool task_graph::contain_task(task* t)
+    {
+        return t_map.find(t) != t_map.end();
+    }
+
+    bool task_graph::contain_data(message* m)
+    {
+        return d_map.find(m) != d_map.end();
+    }
+
+    bool task_graph::contain_dependence(task* parent, task* child)
+    {
+        if (t_map.find(parent) == t_map.end())
+            return false;
+        return t_map[parent].childs.find(child) != t_map[parent].childs.end();
     }
 
 }
