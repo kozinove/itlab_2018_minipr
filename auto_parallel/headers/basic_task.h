@@ -18,6 +18,7 @@ namespace auto_parallel
         virtual ~task();
         virtual task* perform() = 0;
         friend class task_graph;
+        friend class parallelizer;
     };
 
 }

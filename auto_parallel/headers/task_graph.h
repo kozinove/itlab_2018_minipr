@@ -20,10 +20,8 @@ namespace auto_parallel
         {
             const int id;
             int ref_count;
-            int version;
             d_id(const int nid = 0): id(nid)
             {
-                version = 0;
                 ref_count = 0;
             }
         };
@@ -58,6 +56,8 @@ namespace auto_parallel
         bool contain_task(task* t);
         bool contain_data(message* m);
         bool contain_dependence(task* parent, task* child);
+
+        friend class parallelizer;
     };
 
 }
