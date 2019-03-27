@@ -8,6 +8,11 @@ namespace auto_parallel
 
     }
 
+    data::~data()
+    {
+
+    }
+
     message::message(data* const _d): d(_d)
     {
 
@@ -16,6 +21,11 @@ namespace auto_parallel
     message::~message()
     {
 
+    }
+
+    data* const message::get_data()
+    {
+        return d;
     }
 
 }

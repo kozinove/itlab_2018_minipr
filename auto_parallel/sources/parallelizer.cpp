@@ -27,28 +27,47 @@ namespace auto_parallel
     {
         while (ready_tasks.size())
             ready_tasks.pop();
+
         task_v.clear();
         data_v.clear();
         task_v.resize(_tg.t_map.size());
         data_v.resize(_tg.d_map.size());
+
         std::map<task*, int> tmp;
         std::map<message*, int> dmp;
+        std::map<int, task*> tmpr;
+        std::map<int, message*> dmpr;
         unsigned i = 0;
-        for (auto it = _tg.d_map.begin(); it != _tg.d_map.end(); ++it, ++i)
+
+        for (auto it = _tg.d_map.begin(); it != _tg.d_map.end(); ++it)
         {
-            dmp[(*it).first] = i;
-            data_v[i].d = (*it).first;
+            dmpr[(*it).second.id] = (*it).first;
+        }
+
+        for (auto it = dmpr.begin(); it != dmpr.end(); ++it, ++i)
+        {
+            dmp[(*it).second] = i;
+            data_v[i].d = (*it).second;
             data_v[i].version = 0;
         }
-        i = 0;
-        for (auto it = _tg.t_map.begin(); it != _tg.t_map.end(); ++it, ++i)
+        dmpr.clear();
+
+        for (auto it = _tg.t_map.begin(); it != _tg.t_map.end(); ++it)
         {
-            tmp[(*it).first] = i;
-            task_v[i].t = (*it).first;
-            task_v[i].parents = (*it).second.parents.size();
-            if ((*it).second.parents.empty())
+            tmpr[(*it).second.id] = (*it).first;
+        }
+
+        i = 0;
+        for (auto it = tmpr.begin(); it != tmpr.end(); ++it, ++i)
+        {
+            tmp[(*it).second] = i;
+            task_v[i].t = (*it).second;
+            task_v[i].parents = (*_tg.t_map.find((*it).second)).second.parents.size();
+            if (task_v[i].parents == 0)
                 ready_tasks.push(i);
         }
+        tmpr.clear();
+
         for (i = 0; i < task_v.size(); ++i)
         {
             const std::set<task*>& tp = (*_tg.t_map.find(task_v[i].t)).second.childs;

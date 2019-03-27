@@ -17,6 +17,7 @@ namespace auto_parallel
     public:
         message(data* const _d = nullptr);
         virtual ~message();
+        data* const get_data();
         virtual void send() = 0;
         virtual void recv() = 0;
     };
