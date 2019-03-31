@@ -81,4 +81,80 @@ namespace auto_parallel
         }
     }
 
+    void parallelizer::execution()
+    {
+        if (proc_id == 0)
+            master();
+        else
+            worker();
+    }
+
+    void parallelizer::master()
+    {
+
+    }
+
+    void parallelizer::worker()
+    {
+
+    }
+
+    void parallelizer::send_instruction(int type, int proc)
+    {
+        if ((proc >= proc_size) || (proc < 0))
+            throw -2;
+        MPI_Send(&type, 1, MPI_INT, proc, 1, MPI_COMM_WORLD);
+    }
+
+    int parallelizer::recv_instruction(int proc)
+    {
+        if ((proc >= proc_size) || (proc < 0))
+            throw -2;
+        MPI_Status status;
+        int tmp;
+        MPI_Recv(&tmp, 1, MPI_INT, proc, 1, MPI_COMM_WORLD, &status);
+        return tmp;
+    }
+
+    void parallelizer::send_ver_of_data(int did, int proc)
+    {
+        if ((did >= data_v.size()) || (did < 0))
+            throw -1;
+        if ((proc >= proc_size) || (proc < 0))
+            throw -2;
+        MPI_Send(&data_v[did].version, 1, MPI_INT, proc, 2, MPI_COMM_WORLD);
+    }
+
+    int parallelizer::recv_ver_of_data(int did, int proc)
+    {
+        if ((did >= data_v.size()) || (did < 0))
+            throw -1;
+        if ((proc >= proc_size) || (proc < 0))
+            throw -2;
+        MPI_Status status;
+        int tmp;
+        MPI_Recv(&tmp, 1, MPI_INT, proc, 2, MPI_COMM_WORLD, &status);
+        return tmp;
+    }
+
+    void parallelizer::send_data(int did, int proc)
+    {
+        if ((did >= data_v.size()) || (did < 0))
+            throw -1;
+        if ((proc >= proc_size) || (proc < 0))
+            throw -2;
+        data_v[did].d->send(proc);
+        send_ver_of_data(did, proc);
+    }
+
+    void parallelizer::recv_data(int did, int proc)
+    {
+        if ((did >= data_v.size()) || (did < 0))
+            throw -1;
+        if ((proc >= proc_size) || (proc < 0))
+            throw -2;
+        data_v[did].d->recv(proc);
+        data_v[did].version = recv_ver_of_data(did, proc);
+    }
+
 }

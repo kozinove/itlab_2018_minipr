@@ -18,8 +18,8 @@ namespace auto_parallel
         message(data* const _d = nullptr);
         virtual ~message();
         data* const get_data();
-        virtual void send() = 0;
-        virtual void recv() = 0;
+        virtual void send(int proc) = 0;
+        virtual void recv(int proc) = 0;
     };
 
 }

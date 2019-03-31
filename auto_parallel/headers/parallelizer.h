@@ -35,13 +35,23 @@ namespace auto_parallel
         std::vector<t_info> task_v;
         std::vector<d_info> data_v;
 
-        void send_ver_of_data(int tid);
-        void recv_ver_of_data(int tid);
+        void master();
+        void worker();
+
+        void send_instruction(int type, int proc);
+        int recv_instruction(int proc);
+
+        void send_ver_of_data(int did, int proc);
+        int recv_ver_of_data(int did, int proc);
+
+        void send_data(int did, int proc);
+        void recv_data(int did, int proc);
 
     public:
         parallelizer(int mode, int* argc = NULL, char*** argv = NULL);
         parallelizer(int mode, const task_graph& _tg, int* argc = NULL, char*** argv = NULL);
         ~parallelizer();
+
         void init(const task_graph& _tg);
         void execution();
     };
