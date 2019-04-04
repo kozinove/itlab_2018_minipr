@@ -23,7 +23,7 @@ namespace auto_parallel
         task(std::vector<message*>& mes_v, std::vector<bool>& mode_v);
 
         virtual ~task();
-        virtual task* perform() = 0;
+        virtual void perform() = 0;
 
         friend class task_graph;
         friend class parallelizer;

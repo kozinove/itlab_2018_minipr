@@ -155,4 +155,54 @@ namespace auto_parallel
         return t_map[parent].childs.find(child) != t_map[parent].childs.end();
     }
 
+    void task_graph::add_task(task& t)
+    {
+        add_task(&t);
+    }
+
+    void task_graph::add_data(message& m)
+    {
+        add_data(&m);
+    }
+
+    void task_graph::add_dependence(task& parent, task& child)
+    {
+        add_dependence(&parent, &child);
+    }
+
+    void task_graph::del_task(task& t)
+    {
+        del_task(&t);
+    }
+
+    void task_graph::del_data(message& m)
+    {
+        del_data(&m);
+    }
+
+    void task_graph::del_dependence(task& parent, task& child)
+    {
+        del_dependence(&parent, &child);
+    }
+
+    void task_graph::change_task(task& old_t, task& new_t)
+    {
+        change_task(&old_t, &new_t);
+    }
+
+    bool task_graph::contain_task(task& t)
+    {
+        return contain_task(&t);
+    }
+
+    bool task_graph::contain_data(message& m)
+    {
+        return contain_data(&m);
+    }
+
+    bool task_graph::contain_dependence(task& parent, task& child)
+    {
+        return contain_dependence(&parent, &child);
+    }
+
 }

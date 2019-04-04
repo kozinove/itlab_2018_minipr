@@ -48,6 +48,9 @@ namespace auto_parallel
         void recv_data(int did, int proc);
 
     public:
+
+        const static int main_proc;
+
         parallelizer(int mode, int* argc = NULL, char*** argv = NULL);
         parallelizer(int mode, const task_graph& _tg, int* argc = NULL, char*** argv = NULL);
         ~parallelizer();

@@ -46,16 +46,28 @@ namespace auto_parallel
         task_graph& operator =(const task_graph& _tg);
 
         void add_task(task* t);
+        void add_task(task& t);
         void add_data(message* m);
+        void add_data(message& m);
         void add_dependence(task* parent, task* child);
+        void add_dependence(task& parent, task& child);
+
         void del_task(task* t);
+        void del_task(task& t);
         void del_data(message* m);
+        void del_data(message& m);
         void del_dependence(task* parent, task* child);
+        void del_dependence(task& parent, task& child);
+
         void change_task(task* old_t, task* new_t);
+        void change_task(task& old_t, task& new_t);
 
         bool contain_task(task* t);
+        bool contain_task(task& t);
         bool contain_data(message* m);
+        bool contain_data(message& m);
         bool contain_dependence(task* parent, task* child);
+        bool contain_dependence(task& parent, task& child);
 
         friend class parallelizer;
     };

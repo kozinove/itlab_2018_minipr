@@ -3,6 +3,8 @@
 namespace auto_parallel
 {
 
+    const int parallelizer::main_proc = 0;
+
     parallelizer::parallelizer(int mode, int* argc, char*** argv)
     {
         MPI_Init(argc, argv);
@@ -96,7 +98,10 @@ namespace auto_parallel
 
     void parallelizer::worker()
     {
+        while(1)
+        {
 
+        }
     }
 
     void parallelizer::send_instruction(int type, int proc)
@@ -118,7 +123,7 @@ namespace auto_parallel
 
     void parallelizer::send_ver_of_data(int did, int proc)
     {
-        if ((did >= data_v.size()) || (did < 0))
+        if ((did >= (int)data_v.size()) || (did < 0))
             throw -1;
         if ((proc >= proc_size) || (proc < 0))
             throw -2;
@@ -127,7 +132,7 @@ namespace auto_parallel
 
     int parallelizer::recv_ver_of_data(int did, int proc)
     {
-        if ((did >= data_v.size()) || (did < 0))
+        if ((did >= (int)data_v.size()) || (did < 0))
             throw -1;
         if ((proc >= proc_size) || (proc < 0))
             throw -2;
@@ -139,7 +144,7 @@ namespace auto_parallel
 
     void parallelizer::send_data(int did, int proc)
     {
-        if ((did >= data_v.size()) || (did < 0))
+        if ((did >= (int)data_v.size()) || (did < 0))
             throw -1;
         if ((proc >= proc_size) || (proc < 0))
             throw -2;
@@ -149,7 +154,7 @@ namespace auto_parallel
 
     void parallelizer::recv_data(int did, int proc)
     {
-        if ((did >= data_v.size()) || (did < 0))
+        if ((did >= (int)data_v.size()) || (did < 0))
             throw -1;
         if ((proc >= proc_size) || (proc < 0))
             throw -2;
