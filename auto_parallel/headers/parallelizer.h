@@ -14,6 +14,11 @@ namespace auto_parallel
     {
     private:
 
+        struct instruction
+        {
+            int n[2];
+        };
+
         struct d_info
         {
             message* d;
@@ -26,6 +31,7 @@ namespace auto_parallel
             int parents;
             std::vector<int> childs;
             std::vector<int> data_id;
+            std::vector<int> const_data_id;
         };
 
         int proc_id;
@@ -38,8 +44,10 @@ namespace auto_parallel
         void master();
         void worker();
 
-        void send_instruction(int type, int proc);
-        int recv_instruction(int proc);
+        void execute_task(int task_id);
+
+        void send_instruction(int type, int proc, int info = 0);
+        instruction recv_instruction(int proc);
 
         void send_ver_of_data(int did, int proc);
         int recv_ver_of_data(int did, int proc);

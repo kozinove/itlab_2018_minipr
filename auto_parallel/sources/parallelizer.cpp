@@ -77,9 +77,12 @@ namespace auto_parallel
             unsigned j = 0;
             for (auto it = tp.begin(); it != tp.end(); ++it, ++j)
                 task_v[i].childs[j] = tmp[*it];
-            task_v[i].data_id.resize(task_v[i].t->data_v.size());
+            //task_v[i].data_id.resize(task_v[i].t->data_v.size());
             for (j = 0; j < task_v[i].t->data_v.size(); ++j)
-                task_v[i].data_id[j] = dmp[task_v[i].t->data_v[j]];
+                if (task_v[i].t->mods[j] == task::read_write)
+                    task_v[i].data_id.push_back(dmp[task_v[i].t->data_v[j]]);
+                else
+                    task_v[i].const_data_id.push_back(dmp[task_v[i].t->data_v[j]]);
         }
     }
 
@@ -98,27 +101,47 @@ namespace auto_parallel
 
     void parallelizer::worker()
     {
+        instruction cur_inst;
+
         while(1)
         {
-
+            cur_inst = recv_instruction(main_proc);
+            switch (cur_inst.n[0])
+            {
+            case 0:
+                execute_task(cur_inst.n[1]);
+                break;
+            default:
+                goto finish;
+            }
         }
+        finish:;
     }
 
-    void parallelizer::send_instruction(int type, int proc)
+    void parallelizer::execute_task(int task_id)
+    {
+
+        task_v[task_id].t->perform();
+    }
+
+    void parallelizer::send_instruction(int type, int proc, int info)
     {
         if ((proc >= proc_size) || (proc < 0))
             throw -2;
-        MPI_Send(&type, 1, MPI_INT, proc, 1, MPI_COMM_WORLD);
+        instruction i;
+        i.n[0] = type;
+        i.n[1] = info;
+        MPI_Send(i.n, 2, MPI_INT, proc, 1, MPI_COMM_WORLD);
     }
 
-    int parallelizer::recv_instruction(int proc)
+    parallelizer::instruction parallelizer::recv_instruction(int proc)
     {
         if ((proc >= proc_size) || (proc < 0))
             throw -2;
         MPI_Status status;
-        int tmp;
-        MPI_Recv(&tmp, 1, MPI_INT, proc, 1, MPI_COMM_WORLD, &status);
-        return tmp;
+        instruction i;
+        MPI_Recv(i.n, 2, MPI_INT, proc, 1, MPI_COMM_WORLD, &status);
+        return i;
     }
 
     void parallelizer::send_ver_of_data(int did, int proc)
