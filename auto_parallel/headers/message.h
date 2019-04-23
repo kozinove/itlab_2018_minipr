@@ -1,6 +1,8 @@
 #ifndef __MESSAGE_H__
 #define __MESSAGE_H__
 
+#include "mpi.h"
+
 namespace auto_parallel
 {
 
@@ -13,13 +15,19 @@ namespace auto_parallel
     class message
     {
     protected:
-        data* const d;
+        data* d;
     public:
+        const static bool read_only;
+        const static bool read_write;
+
         message(data* const _d = nullptr);
         virtual ~message();
         data* const get_data();
         virtual void send(int proc) = 0;
         virtual void recv(int proc) = 0;
+
+        void simple_send(unsigned size, int proc);
+        void simple_recv(unsigned size, int proc);
     };
 
 }

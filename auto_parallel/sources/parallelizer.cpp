@@ -7,14 +7,20 @@ namespace auto_parallel
 
     parallelizer::parallelizer(int mode, int* argc, char*** argv)
     {
-        MPI_Init(argc, argv);
+        int flag;
+        MPI_Initialized(&flag);
+        if (!flag)
+            MPI_Init(argc, argv);
         MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
         MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
     }
 
     parallelizer::parallelizer(int mode, const task_graph& _tg, int* argc, char*** argv)
     {
-        MPI_Init(argc, argv);
+        int flag;
+        MPI_Initialized(&flag);
+        if (!flag)
+            MPI_Init(argc, argv);
         MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
         MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
         init(_tg);
@@ -79,7 +85,7 @@ namespace auto_parallel
                 task_v[i].childs[j] = tmp[*it];
             //task_v[i].data_id.resize(task_v[i].t->data_v.size());
             for (j = 0; j < task_v[i].t->data_v.size(); ++j)
-                if (task_v[i].t->mods[j] == task::read_write)
+                if (task_v[i].t->mods[j] == message::read_write)
                     task_v[i].data_id.push_back(dmp[task_v[i].t->data_v[j]]);
                 else
                     task_v[i].const_data_id.push_back(dmp[task_v[i].t->data_v[j]]);
@@ -102,8 +108,8 @@ namespace auto_parallel
     void parallelizer::worker()
     {
         instruction cur_inst;
-
-        while(1)
+        bool exe = true;
+        while(exe)
         {
             cur_inst = recv_instruction(main_proc);
             switch (cur_inst.n[0])
@@ -112,16 +118,18 @@ namespace auto_parallel
                 execute_task(cur_inst.n[1]);
                 break;
             default:
-                goto finish;
+                exe = false;
             }
+            send_instruction(0, main_proc);
         }
-        finish:;
     }
 
     void parallelizer::execute_task(int task_id)
     {
 
         task_v[task_id].t->perform();
+        for (size_t i = 0; i < task_v[task_id].data_id.size(); ++i)
+            ++data_v[task_v[task_id].data_id[i]].version;
     }
 
     void parallelizer::send_instruction(int type, int proc, int info)

@@ -13,8 +13,6 @@ namespace auto_parallel
         std::vector<message*> data_v;
         std::vector<bool> mods;
     public:
-        const static bool read_only;
-        const static bool read_write;
 
         task();
         task(message* dat);
