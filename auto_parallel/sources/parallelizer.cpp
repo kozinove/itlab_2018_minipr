@@ -93,7 +93,12 @@ namespace auto_parallel
 
     void parallelizer::execution()
     {
-        if (proc_id == 0)
+        if (proc_size < 2)
+        {
+            MPI_Abort(MPI_COMM_WORLD, 1);
+            throw -5;
+        }
+        if (proc_id == main_proc)
             master();
         else
             worker();
@@ -101,7 +106,14 @@ namespace auto_parallel
 
     void parallelizer::master()
     {
-
+        while (ready_tasks.size())
+        {
+            int cur_t = ready_tasks.front();
+            ready_tasks.pop();
+        }
+        for (int i = 0; i < proc_size; ++i)
+            if (i != main_proc)
+                send_instruction(-1, i, 0);
     }
 
     void parallelizer::worker()
@@ -119,16 +131,32 @@ namespace auto_parallel
             default:
                 exe = false;
             }
-            send_instruction(0, main_proc);
         }
     }
 
     void parallelizer::execute_task(int task_id)
     {
+        std::vector<int>& dv = task_v[task_id].data_id;
+        MPI_Status status;
+        int size;
+
+        MPI_Probe(main_proc, 3, MPI_COMM_WORLD, &status);
+        MPI_Get_count(&status, MPI_INT, &size);
+        int* recv_d = new int[size];
+        MPI_Recv(recv_d, size, MPI_INT, main_proc, 3, MPI_COMM_WORLD, &status);
+
+        for (int i = 0; i < size; ++i)
+        {
+            data_v[recv_d[i]].d->recv(main_proc);
+        }
 
         task_v[task_id].t->perform();
-        for (size_t i = 0; i < task_v[task_id].data_id.size(); ++i)
-            ++data_v[task_v[task_id].data_id[i]].version;
+
+        for (size_t i = 0; i < dv.size(); ++i)
+        {
+            data_v[dv[i]].d->send(main_proc);
+        }
+        delete recv_d;
     }
 
     void parallelizer::send_instruction(int type, int proc, int info)
