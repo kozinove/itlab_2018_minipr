@@ -10,8 +10,9 @@ namespace auto_parallel
     class task
     {
     protected:
+        // вектора с данными
         std::vector<message*> data_v;
-        std::vector<bool> mods;
+        std::vector<bool> mods; // здесь хранитс€ информаци€ о том изен€ютс€ л данные в задаче
     public:
 
         task();
@@ -21,7 +22,7 @@ namespace auto_parallel
         task(std::vector<message*>& mes_v, std::vector<bool>& mode_v);
 
         virtual ~task();
-        virtual void perform() = 0;
+        virtual void perform() = 0; // выполнение функции
 
         friend class task_graph;
         friend class parallelizer;

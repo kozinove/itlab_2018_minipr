@@ -5,7 +5,7 @@ namespace auto_parallel
 
     const int parallelizer::main_proc = 0;
 
-    parallelizer::parallelizer(int mode, int* argc, char*** argv)
+    parallelizer::parallelizer(int* argc, char*** argv)
     {
         int flag;
         MPI_Initialized(&flag);
@@ -15,7 +15,7 @@ namespace auto_parallel
         MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
     }
 
-    parallelizer::parallelizer(int mode, const task_graph& _tg, int* argc, char*** argv)
+    parallelizer::parallelizer(const task_graph& _tg, int* argc, char*** argv)
     {
         int flag;
         MPI_Initialized(&flag);
@@ -83,7 +83,6 @@ namespace auto_parallel
             unsigned j = 0;
             for (auto it = tp.begin(); it != tp.end(); ++it, ++j)
                 task_v[i].childs[j] = tmp[*it];
-            //task_v[i].data_id.resize(task_v[i].t->data_v.size());
             for (j = 0; j < task_v[i].t->data_v.size(); ++j)
                 if (task_v[i].t->mods[j] == message::read_write)
                     task_v[i].data_id.push_back(dmp[task_v[i].t->data_v[j]]);
