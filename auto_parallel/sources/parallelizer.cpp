@@ -89,6 +89,8 @@ namespace auto_parallel
                 else
                     task_v[i].const_data_id.push_back(dmp[task_v[i].t->data_v[j]]);
         }
+        top_versions.resize(data_v.size());
+        top_versions.assign(data_v.size(), 0);
     }
 
     void parallelizer::execution()
@@ -106,10 +108,10 @@ namespace auto_parallel
 
     void parallelizer::master()
     {
-        std::vector<std::vector<int>> versions(proc_size);
-        for (std::vector<int>& i: versions)
+        std::vector<std::set<int>> versions(data_v.size());
+        for (std::set<int>& i: versions)
             for (int j = 0; j < proc_size; ++j)
-                i.push_back(j);
+                i.insert(j);
         std::set<int> ready_procs;
         std::queue<std::pair<int,int>> working_procs;
         for (int i = 0; i < proc_size; ++i)
@@ -124,14 +126,14 @@ namespace auto_parallel
                 ready_tasks.pop();
                 int cur_proc = *ready_procs.begin();
                 ready_procs.erase(ready_procs.begin());
-                control_task(cur_t, cur_proc);
+                control_task(cur_t, cur_proc, versions);
                 working_procs.push({cur_proc, cur_t});
             }
             while (working_procs.size())
             {
                 std::pair<int,int> p = working_procs.front();
                 working_procs.pop();
-                wait_proc(p.second, p.first);
+                wait_proc(p.second, p.first, versions);
                 ready_procs.insert(p.first);
             }
         }
@@ -159,18 +161,54 @@ namespace auto_parallel
         }
     }
 
-    void parallelizer::control_task(int task_id, int proc)
+    void parallelizer::control_task(int task_id, int proc, std::vector<std::set<int>>& v)
     {
+        send_instruction(0, proc, task_id);
+        int* low_versions = new int[task_v[task_id].data_id.size() + task_v[task_id].const_data_id.size()];
+        int size = 0;
 
+        for (unsigned i = 0; i < task_v[task_id].data_id.size(); ++i)
+        {
+            std::set<int>& s = v[task_v[task_id].data_id[i]];
+            if (s.find(proc) == s.end())
+                low_versions[size++] = task_v[task_id].data_id[i];
+            s.clear();
+            s.insert(proc);
+            ++top_versions[task_v[task_id].data_id[i]];
+        }
+        for (unsigned i = 0; i < task_v[task_id].const_data_id.size(); ++i)
+        {
+            std::set<int>& s = v[task_v[task_id].const_data_id[i]];
+            if (s.find(proc) == s.end())
+            {
+                low_versions[size++] = task_v[task_id].const_data_id[i];
+                s.insert(proc);
+            }
+        }
+        MPI_Send(low_versions, size, MPI_INT, proc, 3, MPI_COMM_WORLD);
+
+        for (int i = 0; i < size; ++i)
+            data_v[low_versions[i]].d->send(proc);
     }
 
-    void parallelizer::wait_proc(int task_id, int proc)
+    void parallelizer::wait_proc(int task_id, int proc, std::vector<std::set<int>>& v)
     {
-
+        for (int i = 0; i < task_v[task_id].data_id.size(); ++i)
+        {
+            data_v[task_v[task_id].data_id[i]].d->recv(proc);
+            v[task_v[task_id].data_id[i]].insert(main_proc);
+        }
+        for (int i: task_v[task_id].childs)
+        {
+            --task_v[i].parents;
+            if (task_v[i].parents <= 0)
+                ready_tasks.push(i);
+        }
     }
 
     void parallelizer::execute_task(int task_id)
     {
+        std::cout << ':' << proc_id << ':';
         std::vector<int>& dv = task_v[task_id].data_id;
         MPI_Status status;
         int size;

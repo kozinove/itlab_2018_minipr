@@ -5,6 +5,8 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <set>
+#include <iostream>
 #include "mpi.h"
 
 namespace auto_parallel
@@ -40,13 +42,16 @@ namespace auto_parallel
         std::queue<int> ready_tasks; // очередь с id готовых к исполнению задач
         std::vector<t_info> task_v; // вектор задач id задачи - позиция в этом векторе
         std::vector<d_info> data_v; // вектор данных id данных - позиция в этом векторе
+        std::vector<int> top_versions;
 
         void master(); // основной процесс всегда есть хотя-бы 1
         void worker(); // может и не быть
         // поставить на выполнению задачу по id из вектора
         void execute_task(int task_id);
-        void control_task(int task_id, int proc);
-        void wait_proc(int task_id, int proc);
+        // передача задачи процессу рабочему
+        void control_task(int task_id, int proc, std::vector<std::set<int>>& v);
+        // ожидание завершения задачи рабочим
+        void wait_proc(int task_id, int proc, std::vector<std::set<int>>& v);
         // посылки различных данных
         void send_instruction(int type, int proc, int info = 0);
         instruction recv_instruction(int proc);
