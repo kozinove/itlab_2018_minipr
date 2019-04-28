@@ -106,11 +106,36 @@ namespace auto_parallel
 
     void parallelizer::master()
     {
+        std::vector<std::vector<int>> versions(proc_size);
+        for (std::vector<int>& i: versions)
+            for (int j = 0; j < proc_size; ++j)
+                i.push_back(j);
+        std::set<int> ready_procs;
+        std::queue<std::pair<int,int>> working_procs;
+        for (int i = 0; i < proc_size; ++i)
+            if (i != main_proc)
+                ready_procs.insert(i);
+
         while (ready_tasks.size())
         {
-            int cur_t = ready_tasks.front();
-            ready_tasks.pop();
+            while (ready_tasks.size() && ready_procs.size())
+            {
+                int cur_t = ready_tasks.front();
+                ready_tasks.pop();
+                int cur_proc = *ready_procs.begin();
+                ready_procs.erase(ready_procs.begin());
+                control_task(cur_t, cur_proc);
+                working_procs.push({cur_proc, cur_t});
+            }
+            while (working_procs.size())
+            {
+                std::pair<int,int> p = working_procs.front();
+                working_procs.pop();
+                wait_proc(p.second, p.first);
+                ready_procs.insert(p.first);
+            }
         }
+
         for (int i = 0; i < proc_size; ++i)
             if (i != main_proc)
                 send_instruction(-1, i, 0);
@@ -132,6 +157,16 @@ namespace auto_parallel
                 exe = false;
             }
         }
+    }
+
+    void parallelizer::control_task(int task_id, int proc)
+    {
+
+    }
+
+    void parallelizer::wait_proc(int task_id, int proc)
+    {
+
     }
 
     void parallelizer::execute_task(int task_id)

@@ -45,6 +45,8 @@ namespace auto_parallel
         void worker(); // может и не быть
         // поставить на выполнению задачу по id из вектора
         void execute_task(int task_id);
+        void control_task(int task_id, int proc);
+        void wait_proc(int task_id, int proc);
         // посылки различных данных
         void send_instruction(int type, int proc, int info = 0);
         instruction recv_instruction(int proc);
