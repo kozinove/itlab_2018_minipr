@@ -208,7 +208,6 @@ namespace auto_parallel
 
     void parallelizer::execute_task(int task_id)
     {
-        std::cout << ':' << proc_id << ':';
         std::vector<int>& dv = task_v[task_id].data_id;
         MPI_Status status;
         int size;
