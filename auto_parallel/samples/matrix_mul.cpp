@@ -118,6 +118,4 @@ int main(int argc, char** argv) {
         gr.add_dependence(t[i], te);
     parallelizer pz(gr, &argc, &argv);
     pz.execution();
-    //for (int i = 0; i < n; ++i)
-        //printf("%d ", c[i]);
 }
