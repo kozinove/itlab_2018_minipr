@@ -1,13 +1,14 @@
 #ifndef __PARALLELIZER_H__
 #define __PARALLELIZER_H__
 
-#include "task_graph.h"
 #include <vector>
 #include <queue>
 #include <map>
 #include <set>
 #include <iostream>
 #include "mpi.h"
+#include "task_graph.h"
+#include "it_queue.h"
 
 namespace auto_parallel
 {
@@ -39,7 +40,7 @@ namespace auto_parallel
         int proc_id;
         int proc_size;
 
-        std::queue<int> ready_tasks; // очередь с id готовых к исполнению задач
+        it_queue<int> ready_tasks; // очередь с id готовых к исполнению задач
         std::vector<t_info> task_v; // вектор задач id задачи - позиция в этом векторе
         std::vector<d_info> data_v; // вектор данных id данных - позиция в этом векторе
         std::vector<int> top_versions;
