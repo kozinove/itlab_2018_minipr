@@ -395,9 +395,4 @@ namespace auto_parallel
         return start_time;
     }
 
-    double parallelizer::get_start_time()
-    {
-        return start_time;
-    }
-
 }

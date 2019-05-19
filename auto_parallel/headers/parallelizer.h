@@ -83,8 +83,6 @@ namespace auto_parallel
         // starts execution of all tasks
         void execution();
 
-        static double get_start_time();
-
     };
 
 }
