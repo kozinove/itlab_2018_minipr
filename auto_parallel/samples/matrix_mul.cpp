@@ -1,7 +1,7 @@
-#include "parallel.h"
 #include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
+#include "parallel.h"
 using namespace std;
 using namespace auto_parallel;
 
@@ -13,11 +13,10 @@ public:
     int* arr;
     mymessage(int _size, int* _arr): message(nullptr), size(_size), arr(_arr) {}
     void send(int proc) {
-        MPI_Send(arr, size, MPI_INT, proc, 0, MPI_COMM_WORLD);
+        MPI_Isend(arr, size, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
     }
     void recv(int proc) {
-        MPI_Status status;
-        MPI_Recv(arr, size, MPI_INT, proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Irecv(arr, size, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
     }
 };
 
@@ -27,11 +26,10 @@ public:
     int a;
     onemessage(int _a): message(nullptr), a(_a) {}
     void send(int proc) {
-        MPI_Send(&a, 1, MPI_INT, proc, 0, MPI_COMM_WORLD);
+        MPI_Isend(&a, 1, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
     }
     void recv(int proc) {
-        MPI_Status status;
-        MPI_Recv(&a, 1, MPI_INT, proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Irecv(&a, 1, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
     }
 };
 
@@ -48,7 +46,6 @@ public:
         {
             c += a[i]*b[i];
         }
-
     }
 };
 
@@ -63,10 +60,19 @@ public:
             a[i] = ((onemessage*)data_v[i])->a;
             printf("%d ", a[i]);
         }
+        printf("\n");
+        double time = MPI_Wtime();
+        printf("work time: %f\n",time - parallelizer::get_start_time());
     }
 };
 
 int main(int argc, char** argv) {
+    if (argc > 1)
+    {
+        n = atoi(argv[1]);
+        if (argc > 2)
+            m = atoi(argv[2]);
+    }
     int** a, *b, *c;
     a = new int*[n];
     a[0] = new int[n*m];
@@ -106,11 +112,11 @@ int main(int argc, char** argv) {
         v.push_back(p);
         v.push_back(w);
         v.push_back(q);
-        e.push_back(message::read_write);
+        e.push_back(message::read_only);
         e.push_back(message::read_only);
         e.push_back(message::read_write);
         ve.push_back(q);
-        be.push_back(message::read_write);
+        be.push_back(message::read_only);
         t[i] = new mytask(v,e);
     }
     out_task* te = new out_task(ve,be);

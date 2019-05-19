@@ -1,21 +1,10 @@
 #ifndef __IT_QUEUE__
 #define __IT_QUEUE__
 
-#include <iterator>
 #include <algorithm>
 
 namespace auto_parallel
 {
-
-//    template<typename type>
-//    class cycle_iterator: public std::iterator<std::input_iterator_tag, type>
-//    {
-//        private:
-//
-//
-//
-//        friend class it_queue;
-//    };
 
     template<typename type>
     class it_queue
@@ -24,10 +13,28 @@ namespace auto_parallel
 
         static size_t max_size;
         type* _value;
-        size_t first, last, _size, _capasity;
+        size_t first, last, _size, _capacity;
         bool full;
 
         public:
+
+//        class iterator
+//        {
+//            private:
+//            size_t pos, size;
+//            type* ptr;
+//            public:
+//
+//        };
+//
+//        class const_iterator
+//        {
+//            private:
+//            size_t pos, size;
+//            type* ptr;
+//            public:
+//
+//        };
 
         it_queue();
         ~it_queue();
@@ -36,17 +43,18 @@ namespace auto_parallel
         void push(const type& val);
         void pop();
 
+        type& operator[](size_t n);
         const type& operator[](size_t n) const;
 
         bool empty();
 
         size_t size();
-        size_t capasity();
+        size_t capacity();
 
-        //cycle_iterator<type> begin();
-        //cycle_iterator<type> end();
-        //cycle_iterator<const type> begin() const;
-        //cycle_iterator<const type> end() const;
+//        iterator begin();
+//        iterator end();
+//        const_iterator begin() const;
+//        const_iterator end() const;
 
     };
 
@@ -58,7 +66,7 @@ namespace auto_parallel
     {
         first = last = 0u;
         full = true;
-        _size = _capasity = 0u;
+        _size = _capacity = 0u;
         _value = nullptr;
     }
 
@@ -82,23 +90,23 @@ namespace auto_parallel
             if (_value == nullptr)
             {
                 _value = new type[1u];
-                _capasity = 1u;
+                _capacity = 1u;
             }
             else
             {
-                type* p = new type[std::min((_capasity << 1),max_size)];
-                for (size_t i = 0u, j = first; i < _capasity; ++i,j = (j + 1u) % _capasity)
+                type* p = new type[std::min((_capacity << 1),max_size)];
+                for (size_t i = 0u, j = first; i < _capacity; ++i,j = (j + 1u) % _capacity)
                     p[i] = _value[j];
                 first = 0u;
-                last = _capasity;
-                _capasity = std::min((_capasity << 1),max_size);
+                last = _capacity;
+                _capacity = std::min((_capacity << 1),max_size);
                 delete[] _value;
                 _value = p;
                 full = false;
             }
         }
         _value[last] = val;
-        last = (last + 1u) % _capasity;
+        last = (last + 1u) % _capacity;
         ++_size;
         if (first == last)
             full = true;
@@ -107,16 +115,21 @@ namespace auto_parallel
     template<typename type>
     void it_queue<type>::pop()
     {
-        (_value + first)->~type();
-        first = (first + 1u) % _capasity;
+        first = (first + 1u) % _capacity;
         --_size;
         full = false;
     }
 
     template<typename type>
+    type& it_queue<type>::operator[](size_t n)
+    {
+        return _value[(first + n) % _capacity];
+    }
+
+    template<typename type>
     const type& it_queue<type>::operator[](size_t n) const
     {
-        return _value[(first + n) % _capasity];
+        return _value[(first + n) % _capacity];
     }
 
     template<typename type>
@@ -132,9 +145,9 @@ namespace auto_parallel
     }
 
     template<typename type>
-    size_t it_queue<type>::capasity()
+    size_t it_queue<type>::capacity()
     {
-        return _capasity;
+        return _capacity;
     }
 
 }
