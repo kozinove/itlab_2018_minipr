@@ -5,6 +5,7 @@ namespace auto_parallel
 
     double parallelizer::start_time = 0.0;
     const int parallelizer::main_proc = 0;
+    std::map<std::pair<message*,int>, std::vector<MPI_Request>> parallelizer::requests;
 
     parallelizer::parallelizer(int* argc, char*** argv)
     {
@@ -79,7 +80,7 @@ namespace auto_parallel
             task_v[i].t = (*it).second;
             task_v[i].parents = (*_tg.t_map.find((*it).second)).second.parents.size();
             if (task_v[i].parents == 0)
-                ready_tasks.push(i);
+                ready_tasks.push({i, -1});
         }
         tmpr.clear();
 
@@ -103,14 +104,27 @@ namespace auto_parallel
     void parallelizer::execution()
     {
         if (proc_size < 2)
-        {
-            MPI_Abort(MPI_COMM_WORLD, 1);
-            throw -5;
-        }
-        if (proc_id == main_proc)
+            sequential_execution();
+        else if (proc_id == main_proc)
             master();
         else
             worker();
+    }
+
+    void parallelizer::sequential_execution()
+    {
+        while(ready_tasks.size())
+        {
+            std::pair<int, int> p = ready_tasks.front();
+            ready_tasks.pop();
+            task_v[p.first].t->perform();
+            for (int i: task_v[p.first].childs)
+            {
+                --task_v[i].parents;
+                if (task_v[i].parents <= 0)
+                    ready_tasks.push({i, -1});
+            }
+        }
     }
 
     void parallelizer::master()
@@ -119,23 +133,45 @@ namespace auto_parallel
         for (std::set<int>& i: versions)
             for (int j = 0; j < proc_size; ++j)
                 i.insert(j);
-        std::set<int> ready_procs;
+
         std::queue<std::pair<int,int>> working_procs;
+
+        std::set<int> ready_procs;
         for (int i = 0; i < proc_size; ++i)
             if (i != main_proc)
                 ready_procs.insert(i);
 
+        int start_task = 0;
+
         while (ready_tasks.size())
         {
-            while (ready_tasks.size() && ready_procs.size())
+            int cur_proc = 1;
+            // data sending
+            for (int i = start_task; i < ready_tasks.size(); ++i)
             {
-                int cur_t = ready_tasks.front();
-                ready_tasks.pop();
-                int cur_proc = *ready_procs.begin();
-                ready_procs.erase(ready_procs.begin());
-                control_task(cur_t, cur_proc, versions);
-                working_procs.push({cur_proc, cur_t});
+                if (ready_tasks[i].second == -1)
+                {
+                    send_instruction(1, cur_proc, ready_tasks[i].first);
+                    send_task_data(ready_tasks[i].first, cur_proc, versions);
+                    ready_tasks[i].second = cur_proc;
+                    next_proc(cur_proc);
+                }
+                ++start_task;
             }
+            start_task -= (int)ready_procs.size();
+            // task sending
+            while (ready_tasks.size())
+            {
+                std::pair<int,int> cur_t = ready_tasks.front();
+                if (ready_procs.find(cur_t.second) == ready_procs.end())
+                    break;
+                ready_procs.erase(cur_t.second);
+                ready_tasks.pop();
+                send_instruction(0, cur_t.second, cur_t.first);
+                working_procs.push({cur_t.second, cur_t.first});
+            }
+            start_task += (int)ready_procs.size();
+            // task waiting
             while (working_procs.size())
             {
                 std::pair<int,int> p = working_procs.front();
@@ -162,86 +198,166 @@ namespace auto_parallel
             case 0:
                 execute_task(cur_inst.n[1]);
                 break;
+            case 1:
+                recv_task_data(cur_inst.n[1], main_proc);
+                break;
             default:
                 exe = false;
             }
         }
     }
 
-    void parallelizer::control_task(int task_id, int proc, std::vector<std::set<int>>& v)
+    void parallelizer::send_task_data(int tid, int proc, std::vector<std::set<int>>& ver)
     {
-        send_instruction(0, proc, task_id);
-        int* low_versions = new int[task_v[task_id].data_id.size() + task_v[task_id].const_data_id.size()];
+        std::vector<int>& d = task_v[tid].data_id;
+        std::vector<int>& cd = task_v[tid].const_data_id;
+        int* low_versions = new int[d.size() + cd.size()];
         int size = 0;
 
-        for (unsigned i = 0; i < task_v[task_id].data_id.size(); ++i)
+        for (int i = 0; i < d.size(); ++i)
         {
-            std::set<int>& s = v[task_v[task_id].data_id[i]];
-            if (s.find(proc) == s.end())
-                low_versions[size++] = task_v[task_id].data_id[i];
-            s.clear();
-            s.insert(proc);
-            ++top_versions[task_v[task_id].data_id[i]];
-        }
-        for (unsigned i = 0; i < task_v[task_id].const_data_id.size(); ++i)
-        {
-            std::set<int>& s = v[task_v[task_id].const_data_id[i]];
-            if (s.find(proc) == s.end())
+            if (ver[d[i]].find(proc) == ver[d[i]].end())
             {
-                low_versions[size++] = task_v[task_id].const_data_id[i];
-                s.insert(proc);
+                ver[d[i]].insert(proc);
+                low_versions[size++] = d[i];
             }
         }
-        MPI_Send(low_versions, size, MPI_INT, proc, 3, MPI_COMM_WORLD);
+        for (int i = 0; i < cd.size(); ++i)
+        {
+            if (ver[cd[i]].find(proc) == ver[cd[i]].end())
+            {
+                ver[cd[i]].insert(proc);
+                low_versions[size++] = cd[i];
+            }
+        }
 
+        MPI_Send(low_versions, size, MPI_INT, proc, 3, MPI_COMM_WORLD);
         for (int i = 0; i < size; ++i)
             data_v[low_versions[i]].d->send(proc);
+
+        delete[] low_versions;
     }
 
     void parallelizer::wait_proc(int task_id, int proc, std::vector<std::set<int>>& v)
     {
-        for (int i = 0; i < task_v[task_id].data_id.size(); ++i)
+        std::vector<int>& d = task_v[task_id].data_id;
+        std::vector<int>& cd = task_v[task_id].const_data_id;
+        MPI_Status status;
+
+        for (int i = 0; i < d.size(); ++i)
         {
-            data_v[task_v[task_id].data_id[i]].d->recv(proc);
-            v[task_v[task_id].data_id[i]].insert(main_proc);
+            std::pair<message*, int> p(data_v[d[i]].d, proc);
+            if (requests.find(p) == requests.end())
+                continue;
+            std::vector<MPI_Request>& vec = requests[p];
+            for (int j = 0; j < vec.size(); ++j)
+                MPI_Wait(&vec[j], &status);
+            requests.erase(p);
         }
+
+        for (int i = 0; i < cd.size(); ++i)
+        {
+            std::pair<message*, int> p(data_v[cd[i]].d, proc);
+            if (requests.find(p) == requests.end())
+                continue;
+            std::vector<MPI_Request>& vec = requests[p];
+            for (int j = 0; j < vec.size(); ++j)
+                MPI_Wait(&vec[j],&status);
+            requests.erase(p);
+        }
+
+        for (int i = 0; i < d.size(); ++i)
+        {
+            data_v[d[i]].d->recv(proc);
+            top_versions[d[i]]++;
+            v[d[i]].clear();
+            v[d[i]].insert(proc);
+            v[d[i]].insert(main_proc);
+        }
+
+        for (int i = 0; i < d.size(); ++i)
+        {
+            std::pair<message*, int> p(data_v[d[i]].d, proc);
+            if (requests.find(p) == requests.end())
+                continue;
+            std::vector<MPI_Request>& vec = requests[p];
+            for (int j = 0; j < vec.size(); ++j)
+                MPI_Wait(&vec[j],&status);
+            requests.erase(p);
+        }
+
         for (int i: task_v[task_id].childs)
         {
             --task_v[i].parents;
             if (task_v[i].parents <= 0)
-                ready_tasks.push(i);
+                ready_tasks.push({i, -1});
         }
+    }
+
+    void parallelizer::recv_task_data(int tid, int proc)
+    {
+        MPI_Status status;
+        int size;
+
+        MPI_Probe(proc, 3, MPI_COMM_WORLD, &status);
+        MPI_Get_count(&status, MPI_INT, &size);
+        int* recv_d = new int[size];
+        MPI_Recv(recv_d, size, MPI_INT, proc, 3, MPI_COMM_WORLD, &status);
+
+        for (int i = 0; i < size; ++i)
+            data_v[recv_d[i]].d->recv(proc);
+
+        delete[] recv_d;
     }
 
     void parallelizer::execute_task(int task_id)
     {
-        std::vector<int>& dv = task_v[task_id].data_id;
+        std::vector<int>& d = task_v[task_id].data_id;
+        std::vector<int>& cd = task_v[task_id].const_data_id;
         MPI_Status status;
-        int size;
 
-        MPI_Probe(main_proc, 3, MPI_COMM_WORLD, &status);
-        MPI_Get_count(&status, MPI_INT, &size);
-        int* recv_d = new int[size];
-        MPI_Recv(recv_d, size, MPI_INT, main_proc, 3, MPI_COMM_WORLD, &status);
-
-        for (int i = 0; i < size; ++i)
+        for (int i = 0; i < d.size(); ++i)
         {
-            data_v[recv_d[i]].d->recv(main_proc);
+            std::pair<message*, int> p(data_v[d[i]].d, main_proc);
+            if (requests.find(p) == requests.end())
+                continue;
+            std::vector<MPI_Request>& vec = requests[p];
+            for (int j = 0; j < vec.size(); ++j)
+                MPI_Wait(&vec[j],&status);
+            requests.erase(p);
+        }
+
+        for (int i = 0; i < cd.size(); ++i)
+        {
+            std::pair<message*, int> p(data_v[cd[i]].d, main_proc);
+            if (requests.find(p) == requests.end())
+                continue;
+            std::vector<MPI_Request>& vec = requests[p];
+            for (int j = 0; j < vec.size(); ++j)
+                MPI_Wait(&vec[j],&status);
+            requests.erase(p);
         }
 
         task_v[task_id].t->perform();
 
-        for (size_t i = 0; i < dv.size(); ++i)
+        for (size_t i = 0; i < d.size(); ++i)
+            data_v[d[i]].d->send(main_proc);
+
+        for (int i = 0; i < d.size(); ++i)
         {
-            data_v[dv[i]].d->send(main_proc);
+            std::pair<message*, int> p(data_v[d[i]].d, main_proc);
+            if (requests.find(p) == requests.end())
+                continue;
+            std::vector<MPI_Request>& vec = requests[p];
+            for (int j = 0; j < vec.size(); ++j)
+                MPI_Wait(&vec[j], &status);
+            requests.erase(p);
         }
-        delete recv_d;
+
     }
 
     void parallelizer::send_instruction(int type, int proc, int info)
     {
-        if ((proc >= proc_size) || (proc < 0))
-            throw -2;
         instruction i;
         i.n[0] = type;
         i.n[1] = info;
@@ -250,53 +366,33 @@ namespace auto_parallel
 
     parallelizer::instruction parallelizer::recv_instruction(int proc)
     {
-        if ((proc >= proc_size) || (proc < 0))
-            throw -2;
         MPI_Status status;
         instruction i;
         MPI_Recv(i.n, 2, MPI_INT, proc, 1, MPI_COMM_WORLD, &status);
         return i;
     }
 
-    void parallelizer::send_ver_of_data(int did, int proc)
+    void parallelizer::next_proc(int& proc)
     {
-        if ((did >= (int)data_v.size()) || (did < 0))
-            throw -1;
-        if ((proc >= proc_size) || (proc < 0))
-            throw -2;
-        MPI_Send(&data_v[did].version, 1, MPI_INT, proc, 2, MPI_COMM_WORLD);
+        proc = 1 + proc % (proc_size - 1);
     }
 
-    int parallelizer::recv_ver_of_data(int did, int proc)
+    MPI_Request* parallelizer::new_request(message* mes, int proc)
     {
-        if ((did >= (int)data_v.size()) || (did < 0))
-            throw -1;
-        if ((proc >= proc_size) || (proc < 0))
-            throw -2;
-        MPI_Status status;
-        int tmp;
-        MPI_Recv(&tmp, 1, MPI_INT, proc, 2, MPI_COMM_WORLD, &status);
-        return tmp;
+        std::pair<message*, int> p(mes, proc);
+        MPI_Request r;
+        requests[p].push_back(r);
+        return &(requests[p][requests[p].size()-1u]);
     }
 
-    void parallelizer::send_data(int did, int proc)
+    int parallelizer::get_current_proc()
     {
-        if ((did >= (int)data_v.size()) || (did < 0))
-            throw -1;
-        if ((proc >= proc_size) || (proc < 0))
-            throw -2;
-        data_v[did].d->send(proc);
-        send_ver_of_data(did, proc);
+        return proc_id;
     }
 
-    void parallelizer::recv_data(int did, int proc)
+    double parallelizer::get_start_time()
     {
-        if ((did >= (int)data_v.size()) || (did < 0))
-            throw -1;
-        if ((proc >= proc_size) || (proc < 0))
-            throw -2;
-        data_v[did].d->recv(proc);
-        data_v[did].version = recv_ver_of_data(did, proc);
+        return start_time;
     }
 
     double parallelizer::get_start_time()
