@@ -39,6 +39,8 @@ namespace auto_parallel
         int proc_id;
         int proc_size;
 
+        static double start_time;
+
         std::queue<int> ready_tasks; // очередь с id готовых к исполнению задач
         std::vector<t_info> task_v; // вектор задач id задачи - позиция в этом векторе
         std::vector<d_info> data_v; // вектор данных id данных - позиция в этом векторе
@@ -69,6 +71,8 @@ namespace auto_parallel
         parallelizer(int* argc = NULL, char*** argv = NULL);
         parallelizer(const task_graph& _tg, int* argc = NULL, char*** argv = NULL);
         ~parallelizer();
+
+        static double get_start_time();
 
         void init(const task_graph& _tg); // если был вызван конструктор без графа то нужно вызвать эту функцию
         void execution(); // запуск всего выполнения

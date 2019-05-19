@@ -63,10 +63,19 @@ public:
             a[i] = ((onemessage*)data_v[i])->a;
             printf("%d ", a[i]);
         }
+        printf("\n");
+        double time = MPI_Wtime();
+        printf("work time: %f",time - parallelizer::get_start_time());
     }
 };
 
 int main(int argc, char** argv) {
+    if (argc > 1)
+    {
+        n = atoi(argv[1]);
+        if (argc > 2)
+            m = atoi(argv[2]);
+    }
     int** a, *b, *c;
     a = new int*[n];
     a[0] = new int[n*m];
@@ -106,11 +115,11 @@ int main(int argc, char** argv) {
         v.push_back(p);
         v.push_back(w);
         v.push_back(q);
-        e.push_back(message::read_write);
+        e.push_back(message::read_only);
         e.push_back(message::read_only);
         e.push_back(message::read_write);
         ve.push_back(q);
-        be.push_back(message::read_write);
+        be.push_back(message::read_only);
         t[i] = new mytask(v,e);
     }
     out_task* te = new out_task(ve,be);

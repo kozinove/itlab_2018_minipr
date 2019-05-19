@@ -3,6 +3,7 @@
 namespace auto_parallel
 {
 
+    double parallelizer::start_time = 0.0;
     const int parallelizer::main_proc = 0;
 
     parallelizer::parallelizer(int* argc, char*** argv)
@@ -10,7 +11,10 @@ namespace auto_parallel
         int flag;
         MPI_Initialized(&flag);
         if (!flag)
+        {
             MPI_Init(argc, argv);
+            start_time = MPI_Wtime();
+        }
         MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
         MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
     }
@@ -20,7 +24,10 @@ namespace auto_parallel
         int flag;
         MPI_Initialized(&flag);
         if (!flag)
+        {
             MPI_Init(argc, argv);
+            start_time = MPI_Wtime();
+        }
         MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
         MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
         init(_tg);
@@ -290,6 +297,11 @@ namespace auto_parallel
             throw -2;
         data_v[did].d->recv(proc);
         data_v[did].version = recv_ver_of_data(did, proc);
+    }
+
+    double parallelizer::get_start_time()
+    {
+        return start_time;
     }
 
 }
