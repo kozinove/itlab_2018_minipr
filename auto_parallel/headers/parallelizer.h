@@ -44,6 +44,7 @@ namespace auto_parallel
         it_queue<std::pair<int, int>> ready_tasks;
         std::vector<t_info> task_v;
         std::vector<d_info> data_v;
+
         std::vector<int> top_versions;
 
         static std::map<std::pair<message*,int>, std::vector<MPI_Request>> requests;
@@ -81,6 +82,9 @@ namespace auto_parallel
         void init(const task_graph& _tg); // initialization with tasks
         // starts execution of all tasks
         void execution();
+
+        static double get_start_time();
+
     };
 
 }
