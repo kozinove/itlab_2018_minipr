@@ -232,6 +232,7 @@ namespace auto_parallel
         }
 
         MPI_Send(low_versions, size, MPI_INT, proc, 3, MPI_COMM_WORLD);
+
         for (int i = 0; i < size; ++i)
             data_v[low_versions[i]].d->send(proc);
 
@@ -282,7 +283,7 @@ namespace auto_parallel
                 continue;
             std::vector<MPI_Request>& vec = requests[p];
             for (int j = 0; j < vec.size(); ++j)
-                MPI_Wait(&vec[j],&status);
+                MPI_Wait(&vec[j], &status);
             requests.erase(p);
         }
 
