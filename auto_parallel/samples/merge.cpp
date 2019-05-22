@@ -227,6 +227,7 @@ int main(int argc, char** argv)
 
     if (pz.get_current_proc() == parallelizer::main_proc)
     {
+        double dt = MPI_Wtime();
         sort(p3, p3 + size);
         bool fl = false;
         for (int i = 0; i < size; ++i)
@@ -236,7 +237,7 @@ int main(int argc, char** argv)
             cout << "wrong\n";
         else
             cout << "correct\n";
-        cout << MPI_Wtime() - pz.get_start_time();
+        cout << dt - pz.get_start_time();
         cout.flush();
     }
 }
