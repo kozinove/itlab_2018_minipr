@@ -142,10 +142,10 @@ namespace auto_parallel
                 ready_procs.insert(i);
 
         int start_task = 0;
+        int cur_proc = 1;
 
         while (ready_tasks.size())
         {
-            int cur_proc = 1;
             // data sending
             for (int i = start_task; i < ready_tasks.size(); ++i)
             {
