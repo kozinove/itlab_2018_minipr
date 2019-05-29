@@ -144,7 +144,8 @@ namespace auto_parallel
                 ready_procs.insert(i);
 
         int start_task = 0;
-        int cur_proc = 1;
+        int my_task = -1;
+        int cur_proc = 0;
 
         while (ready_tasks.size())
         {
@@ -153,18 +154,29 @@ namespace auto_parallel
             {
                 if (ready_tasks[i].second == -1)
                 {
-                    send_instruction(1, cur_proc, ready_tasks[i].first);
-                    send_task_data(ready_tasks[i].first, cur_proc, versions);
+                    if (cur_proc != main_proc)
+                    {
+                        send_instruction(1, cur_proc, ready_tasks[i].first);
+                        send_task_data(ready_tasks[i].first, cur_proc, versions);
+                    }
                     ready_tasks[i].second = cur_proc;
                     next_proc(cur_proc);
                 }
                 ++start_task;
             }
-            start_task -= (int)ready_procs.size();
+            start_task -= (int)ready_procs.size() + 1;
             // task sending
             while (ready_tasks.size())
             {
                 std::pair<int,int> cur_t = ready_tasks.front();
+                if (cur_t.second == main_proc)
+                {
+                    if (my_task != -1)
+                        break;
+                    ready_tasks.pop();
+                    my_task = cur_t.first;
+                    continue;
+                }
                 if (ready_procs.find(cur_t.second) == ready_procs.end())
                     break;
                 ready_procs.erase(cur_t.second);
@@ -173,6 +185,27 @@ namespace auto_parallel
                 working_procs.push({cur_t.second, cur_t.first});
             }
             start_task += (int)ready_procs.size();
+
+            if (my_task != -1)
+            {
+                task_v[my_task].t->perform();
+                std::vector<int>& d = task_v[my_task].data_id;
+                for (int i = 0; i < d.size(); ++i)
+                {
+                    top_versions[d[i]]++;
+                    versions[d[i]].clear();
+                    versions[d[i]].insert(main_proc);
+                }
+                for (int i: task_v[my_task].childs)
+                {
+                    --task_v[i].parents;
+                    if (task_v[i].parents <= 0)
+                        ready_tasks.push({i, -1});
+                }
+                my_task = -1;
+            }
+            else
+                start_task += 1;
             // task waiting
             while (working_procs.size())
             {
@@ -377,7 +410,7 @@ namespace auto_parallel
 
     void parallelizer::next_proc(int& proc)
     {
-        proc = 1 + proc % (proc_size - 1);
+        proc = (1 + proc) % proc_size;
     }
 
     MPI_Request* parallelizer::new_request(message* mes, int proc)
