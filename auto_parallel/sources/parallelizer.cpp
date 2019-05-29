@@ -20,7 +20,7 @@ namespace auto_parallel
         MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
     }
 
-    parallelizer::parallelizer(const task_graph& _tg, int* argc, char*** argv)
+    parallelizer::parallelizer(task_graph& _tg, int* argc, char*** argv)
     {
         int flag;
         MPI_Initialized(&flag);
@@ -39,7 +39,7 @@ namespace auto_parallel
         MPI_Finalize();
     }
 
-    void parallelizer::init(const task_graph& _tg)
+    void parallelizer::init(task_graph& _tg)
     {
         while (ready_tasks.size())
             ready_tasks.pop();
@@ -97,6 +97,8 @@ namespace auto_parallel
                 else
                     task_v[i].const_data_id.push_back(dmp[task_v[i].t->data_v[j]]);
         }
+        _tg.clear();
+
         top_versions.resize(data_v.size());
         top_versions.assign(data_v.size(), 0);
     }

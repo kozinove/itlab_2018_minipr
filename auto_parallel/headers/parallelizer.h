@@ -70,7 +70,7 @@ namespace auto_parallel
         const static int main_proc; // 0
 
         parallelizer(int* argc = NULL, char*** argv = NULL);
-        parallelizer(const task_graph& _tg, int* argc = NULL, char*** argv = NULL);
+        parallelizer(task_graph& _tg, int* argc = NULL, char*** argv = NULL);
         ~parallelizer();
         // use this as last argument in MPI_Isend/Irecv (mes = this)
         static MPI_Request* new_request(message* mes, int proc);
@@ -79,7 +79,7 @@ namespace auto_parallel
 
         int get_current_proc();
 
-        void init(const task_graph& _tg); // initialization with tasks
+        void init(task_graph& _tg); // initialization with tasks
         // starts execution of all tasks
         void execution();
 

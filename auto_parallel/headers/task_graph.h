@@ -70,6 +70,8 @@ namespace auto_parallel
         bool contain_dependence(task* parent, task* child);
         bool contain_dependence(task& parent, task& child);
 
+        void clear();
+
         friend class parallelizer;
     };
 

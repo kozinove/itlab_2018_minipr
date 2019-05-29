@@ -205,4 +205,10 @@ namespace auto_parallel
         return contain_dependence(&parent, &child);
     }
 
+    void task_graph::clear()
+    {
+        t_map.clear();
+        d_map.clear();
+    }
+
 }
