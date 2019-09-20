@@ -131,7 +131,6 @@ class merge_t_all: public task
 
 int main(int argc, char** argv)
 {
-    parallelizer pz;
     int layers = 2;
     int size = 1000;
     if (argc > 1)
@@ -149,6 +148,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < size; ++i)
         p1[i] = p3[i] = uid(mt);
 
+    parallelizer pz;
     task_graph tg;
     vector<task*> v1, v2;
     int g = 1 << layers;
@@ -228,7 +228,7 @@ int main(int argc, char** argv)
     if (pz.get_current_proc() == parallelizer::main_proc)
     {
         double dt = MPI_Wtime();
-        sort(p3, p3 + size);
+        /*sort(p3, p3 + size);
         bool fl = false;
         for (int i = 0; i < size; ++i)
             if (p1[i] != p3[i])
@@ -236,7 +236,7 @@ int main(int argc, char** argv)
         if (fl)
             cout << "wrong\n";
         else
-            cout << "correct\n";
+            cout << "correct\n";*/
         cout << dt - pz.get_start_time();
         cout.flush();
     }
