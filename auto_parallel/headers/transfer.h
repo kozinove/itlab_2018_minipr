@@ -1,8 +1,9 @@
 #ifndef __TRANSFER_H__
 #define __TRANSFER_H__
 
+#include <queue>
+#include <climits>
 #include "mpi.h"
-#include "message.h"
 
 namespace auto_parallel
 {
@@ -12,20 +13,18 @@ namespace auto_parallel
     private:
 
         MPI_Comm comm;
-        int tag;
         int proc;
-        message* mes;
+        int tag;
+        std::queue<MPI_Request>* q;
 
     public:
 
-        sender(MPI_Comm _comm = MPI_COMM_WORLD, int _proc = 0);
+        sender(MPI_Comm _comm, int _proc, std::queue<MPI_Request>* _q);
+
         void send(void* buf, int size, MPI_Datatype type);
         void isend(void* buf, int size, MPI_Datatype type);
         void big_send(void* buf, size_t size, MPI_Datatype type);
         void big_isend(void* buf, size_t size, MPI_Datatype type);
-
-        void set_proc(int _proc);
-        void set_message(message* _mes);
 
     };
 
@@ -34,20 +33,18 @@ namespace auto_parallel
     private:
 
         MPI_Comm comm;
+        int proc;
         int tag;
-        int proc; 
-        message* mes;
+        std::queue<MPI_Request>* q;
 
     public:
 
-        receiver(MPI_Comm _comm = MPI_COMM_WORLD, int _proc = 0);
+        receiver(MPI_Comm _comm, int _proc, std::queue<MPI_Request>* _q);
+
         void recv(void* buf, int size, MPI_Datatype type);
         void irecv(void* buf, int size, MPI_Datatype type);
         void big_recv(void* buf, size_t size, MPI_Datatype type);
         void big_irecv(void* buf, size_t size, MPI_Datatype type);
-
-        void set_proc(int _proc);
-        void set_message(message* _mes);
 
     };
 

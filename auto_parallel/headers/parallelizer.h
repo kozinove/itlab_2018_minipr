@@ -7,6 +7,7 @@
 #include <set>
 #include "mpi.h"
 #include "task_graph.h"
+#include "intracomm.h"
 #include "it_queue.h"
 
 namespace auto_parallel

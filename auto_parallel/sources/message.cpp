@@ -31,4 +31,13 @@ namespace auto_parallel
         return d;
     }
 
+    void message::wait_requests()
+    {
+        while (req_q.size())
+        {
+            MPI_Wait(&req_q.front(), MPI_STATUS_IGNORE);
+            req_q.pop();
+        }
+    }
+
 }
