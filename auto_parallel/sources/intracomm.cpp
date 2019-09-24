@@ -27,14 +27,14 @@ namespace auto_parallel
     {
         mes->wait_requests();
         sender se(comm, proc, &(mes->req_q));
-        mes->send(proc);
+        mes->send(se);
     }
 
     void intracomm::recv(message* mes, int proc)
     {
         mes->wait_requests();
         receiver re(comm, proc, &(mes->req_q));
-        mes->recv(proc);
+        mes->recv(re);
     }
 
     void intracomm::bcast(message* mes, int proc)

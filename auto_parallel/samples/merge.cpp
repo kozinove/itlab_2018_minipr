@@ -31,13 +31,13 @@ class m_array: public message
         if (res)
             delete[] p;
     }
-    void send(int proc)
+    void send(sender& se)
     {
-        MPI_Isend(p, size, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
+        se.isend(p, size, MPI_INT);
     }
-    void recv(int proc)
+    void recv(receiver& re)
     {
-        MPI_Irecv(p, size, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
+        re.irecv(p, size, MPI_INT);
     }
     int* get_p()
     {
@@ -131,6 +131,7 @@ class merge_t_all: public task
 
 int main(int argc, char** argv)
 {
+    MPI_Init(&argc, &argv);
     int layers = 2;
     int size = 1000;
     if (argc > 1)
@@ -228,7 +229,8 @@ int main(int argc, char** argv)
     if (pz.get_current_proc() == parallelizer::main_proc)
     {
         double dt = MPI_Wtime();
-        /*sort(p3, p3 + size);
+        sort(p3, p3 + size);
+        double pt = MPI_Wtime();
         bool fl = false;
         for (int i = 0; i < size; ++i)
             if (p1[i] != p3[i])
@@ -236,8 +238,11 @@ int main(int argc, char** argv)
         if (fl)
             cout << "wrong\n";
         else
-            cout << "correct\n";*/
-        cout << dt - pz.get_start_time();
+            cout << "correct\n";
+        cout << dt - pz.get_start_time() << '\n' << pt - dt;
         cout.flush();
     }
+    pz.~parallelizer();
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
 }

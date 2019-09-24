@@ -37,8 +37,8 @@ namespace auto_parallel
             std::vector<int> const_data_id;
         };
 
-        int proc_id;
-        int proc_size;
+        intracomm comm;
+        intracomm instr_comm;
 
         static double start_time;
 
@@ -47,8 +47,6 @@ namespace auto_parallel
         std::vector<d_info> data_v;
 
         std::vector<int> top_versions;
-
-        static std::map<std::pair<message*,int>, std::vector<MPI_Request>> requests;
 
         void master();
         void worker();
@@ -73,8 +71,6 @@ namespace auto_parallel
         parallelizer(int* argc = NULL, char*** argv = NULL);
         parallelizer(task_graph& _tg, int* argc = NULL, char*** argv = NULL);
         ~parallelizer();
-        // use this as last argument in MPI_Isend/Irecv (mes = this)
-        static MPI_Request* new_request(message* mes, int proc);
 
         static double get_start_time();
 

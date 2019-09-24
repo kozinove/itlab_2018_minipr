@@ -15,14 +15,14 @@ class mymessage: public message {
 public:
     int size;
     int* arr;
-    mymessage(int _size, int* _arr): message(nullptr), size(_size), arr(_arr) {}
-    void send(int proc) {
-        MPI_Isend(arr, size, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
+    mymessage(int _size, int* _arr): message(), size(_size), arr(_arr) {}
+    void send(sender& se) {
+        se.isend(arr, size, MPI_INT);
     }
-    void recv(int proc) {
+    void recv(receiver& re) {
         if (arr == nullptr)
             arr = new int[size];
-        MPI_Irecv(arr, size, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
+        re.irecv(arr, size, MPI_INT);
     }
 };
 
@@ -30,12 +30,12 @@ public:
 class onemessage: public message {
 public:
     int a;
-    onemessage(int _a): message(nullptr), a(_a) {}
-    void send(int proc) {
-        MPI_Isend(&a, 1, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
+    onemessage(int _a): message(), a(_a) {}
+    void send(sender& se) {
+        se.isend(&a, 1, MPI_INT);
     }
-    void recv(int proc) {
-        MPI_Irecv(&a, 1, MPI_INT, proc, 0, MPI_COMM_WORLD, parallelizer::new_request(this, proc));
+    void recv(receiver& re) {
+        re.irecv(&a, 1, MPI_INT);
     }
 };
 
@@ -77,13 +77,13 @@ class init_task : public task
     void perform()
     {
         int*& a = ((mymessage*)data_v[0])->arr;
-        a = new int[n * m];
+        a = new int[size_t(n) * m];
         int tn = 0;
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < m; j++)
                 a[i * m + j] = tn++;
-            ((mymessage*)data_v[i])->arr = a + i * m;
+            ((mymessage*)data_v[i])->arr = a + size_t(i) * size_t(m);
         }
     }
 };
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
         if (argc > 2)
             m = atoi(argv[2]);
     }
-    int** a, *b, *c;
+    int* b, *c;
     //a = new int*[n];
     //a[0] = new int[n*m];
     b = new int[m];
@@ -117,7 +117,8 @@ int main(int argc, char** argv) {
     {
         b[i] = tn--;
     }
-
+    cout << "fuck\n";
+    MPI_Init(&argc, &argv);
     parallelizer pz(&argc, &argv);
     task_graph gr;
     mymessage* w = new mymessage(m, b);
@@ -162,4 +163,6 @@ int main(int argc, char** argv) {
         cout << time - parallelizer::get_start_time();
         //printf("work time: %f\n", time - parallelizer::get_start_time());
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
 }

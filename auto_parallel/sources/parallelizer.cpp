@@ -5,7 +5,6 @@ namespace auto_parallel
 
     double parallelizer::start_time = 0.0;
     const int parallelizer::main_proc = 0;
-    std::map<std::pair<message*,int>, std::vector<MPI_Request>> parallelizer::requests;
 
     parallelizer::parallelizer(int* argc, char*** argv)
     {
@@ -16,8 +15,9 @@ namespace auto_parallel
             MPI_Init(argc, argv);
             start_time = MPI_Wtime();
         }
-        MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
-        MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
+        start_time = MPI_Wtime();
+        comm = intracomm(MPI_COMM_WORLD);
+        instr_comm = intracomm(comm);
     }
 
     parallelizer::parallelizer(task_graph& _tg, int* argc, char*** argv)
@@ -29,14 +29,15 @@ namespace auto_parallel
             MPI_Init(argc, argv);
             start_time = MPI_Wtime();
         }
-        MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
-        MPI_Comm_size(MPI_COMM_WORLD, &proc_size);
+        start_time = MPI_Wtime();
+        comm = intracomm(MPI_COMM_WORLD);
+        instr_comm = intracomm(comm);
         init(_tg);
     }
 
     parallelizer::~parallelizer()
     {
-        MPI_Finalize();
+        //MPI_Finalize();
     }
 
     void parallelizer::init(task_graph& _tg)
@@ -78,7 +79,7 @@ namespace auto_parallel
         {
             tmp[(*it).second] = i;
             task_v[i].t = (*it).second;
-            task_v[i].parents = (*_tg.t_map.find((*it).second)).second.parents.size();
+            task_v[i].parents = int((*_tg.t_map.find((*it).second)).second.parents.size());
             if (task_v[i].parents == 0)
                 ready_tasks.push({i, -1});
         }
@@ -105,9 +106,9 @@ namespace auto_parallel
 
     void parallelizer::execution()
     {
-        if (proc_size < 2)
+        if (comm.get_size() < 2)
             sequential_execution();
-        else if (proc_id == main_proc)
+        else if (comm.get_rank() == main_proc)
             master();
         else
             worker();
@@ -133,13 +134,13 @@ namespace auto_parallel
     {
         std::vector<std::set<int>> versions(data_v.size());
         for (std::set<int>& i: versions)
-            for (int j = 0; j < proc_size; ++j)
+            for (int j = 0; j < comm.get_size(); ++j)
                 i.insert(j);
 
         std::queue<std::pair<int,int>> working_procs;
 
         std::set<int> ready_procs;
-        for (int i = 0; i < proc_size; ++i)
+        for (int i = 0; i < comm.get_size(); ++i)
             if (i != main_proc)
                 ready_procs.insert(i);
 
@@ -216,7 +217,7 @@ namespace auto_parallel
             }
         }
 
-        for (int i = 0; i < proc_size; ++i)
+        for (int i = 0; i < comm.get_size(); ++i)
             if (i != main_proc)
                 send_instruction(-1, i, 0);
     }
@@ -247,7 +248,7 @@ namespace auto_parallel
         std::vector<int>& d = task_v[tid].data_id;
         std::vector<int>& cd = task_v[tid].const_data_id;
         int* low_versions = new int[d.size() + cd.size()];
-        int size = 0;
+        size_t size = 0;
 
         for (int i = 0; i < d.size(); ++i)
         {
@@ -266,10 +267,10 @@ namespace auto_parallel
             }
         }
 
-        MPI_Send(low_versions, size, MPI_INT, proc, 3, MPI_COMM_WORLD);
+        MPI_Send(low_versions, size, MPI_INT, proc, 3, instr_comm.get_comm());
 
         for (int i = 0; i < size; ++i)
-            data_v[low_versions[i]].d->send(proc);
+            comm.send(data_v[low_versions[i]].d, proc);
 
         delete[] low_versions;
     }
@@ -278,33 +279,16 @@ namespace auto_parallel
     {
         std::vector<int>& d = task_v[task_id].data_id;
         std::vector<int>& cd = task_v[task_id].const_data_id;
-        MPI_Status status;
 
         for (int i = 0; i < d.size(); ++i)
-        {
-            std::pair<message*, int> p(data_v[d[i]].d, proc);
-            if (requests.find(p) == requests.end())
-                continue;
-            std::vector<MPI_Request>& vec = requests[p];
-            for (int j = 0; j < vec.size(); ++j)
-                MPI_Wait(&vec[j], &status);
-            requests.erase(p);
-        }
+            data_v[d[i]].d->wait_requests();
 
         for (int i = 0; i < cd.size(); ++i)
-        {
-            std::pair<message*, int> p(data_v[cd[i]].d, proc);
-            if (requests.find(p) == requests.end())
-                continue;
-            std::vector<MPI_Request>& vec = requests[p];
-            for (int j = 0; j < vec.size(); ++j)
-                MPI_Wait(&vec[j],&status);
-            requests.erase(p);
-        }
+            data_v[cd[i]].d->wait_requests();
 
         for (int i = 0; i < d.size(); ++i)
         {
-            data_v[d[i]].d->recv(proc);
+            comm.recv(data_v[d[i]].d, proc);
             top_versions[d[i]]++;
             v[d[i]].clear();
             v[d[i]].insert(proc);
@@ -312,15 +296,7 @@ namespace auto_parallel
         }
 
         for (int i = 0; i < d.size(); ++i)
-        {
-            std::pair<message*, int> p(data_v[d[i]].d, proc);
-            if (requests.find(p) == requests.end())
-                continue;
-            std::vector<MPI_Request>& vec = requests[p];
-            for (int j = 0; j < vec.size(); ++j)
-                MPI_Wait(&vec[j], &status);
-            requests.erase(p);
-        }
+            data_v[d[i]].d->wait_requests();
 
         for (int i: task_v[task_id].childs)
         {
@@ -335,13 +311,13 @@ namespace auto_parallel
         MPI_Status status;
         int size;
 
-        MPI_Probe(proc, 3, MPI_COMM_WORLD, &status);
+        MPI_Probe(proc, 3, instr_comm.get_comm(), &status);
         MPI_Get_count(&status, MPI_INT, &size);
         int* recv_d = new int[size];
-        MPI_Recv(recv_d, size, MPI_INT, proc, 3, MPI_COMM_WORLD, &status);
+        MPI_Recv(recv_d, size, MPI_INT, proc, 3, instr_comm.get_comm(), &status);
 
         for (int i = 0; i < size; ++i)
-            data_v[recv_d[i]].d->recv(proc);
+            comm.recv(data_v[recv_d[i]].d, proc);
 
         delete[] recv_d;
     }
@@ -350,46 +326,20 @@ namespace auto_parallel
     {
         std::vector<int>& d = task_v[task_id].data_id;
         std::vector<int>& cd = task_v[task_id].const_data_id;
-        MPI_Status status;
 
         for (int i = 0; i < d.size(); ++i)
-        {
-            std::pair<message*, int> p(data_v[d[i]].d, main_proc);
-            if (requests.find(p) == requests.end())
-                continue;
-            std::vector<MPI_Request>& vec = requests[p];
-            for (int j = 0; j < vec.size(); ++j)
-                MPI_Wait(&vec[j],&status);
-            requests.erase(p);
-        }
+            data_v[d[i]].d->wait_requests();
 
         for (int i = 0; i < cd.size(); ++i)
-        {
-            std::pair<message*, int> p(data_v[cd[i]].d, main_proc);
-            if (requests.find(p) == requests.end())
-                continue;
-            std::vector<MPI_Request>& vec = requests[p];
-            for (int j = 0; j < vec.size(); ++j)
-                MPI_Wait(&vec[j],&status);
-            requests.erase(p);
-        }
+            data_v[cd[i]].d->wait_requests();
 
         task_v[task_id].t->perform();
 
         for (size_t i = 0; i < d.size(); ++i)
-            data_v[d[i]].d->send(main_proc);
+            comm.send(data_v[d[i]].d, main_proc);
 
         for (int i = 0; i < d.size(); ++i)
-        {
-            std::pair<message*, int> p(data_v[d[i]].d, main_proc);
-            if (requests.find(p) == requests.end())
-                continue;
-            std::vector<MPI_Request>& vec = requests[p];
-            for (int j = 0; j < vec.size(); ++j)
-                MPI_Wait(&vec[j], &status);
-            requests.erase(p);
-        }
-
+            data_v[d[i]].d->wait_requests();
     }
 
     void parallelizer::send_instruction(int type, int proc, int info)
@@ -397,33 +347,25 @@ namespace auto_parallel
         instruction i;
         i.n[0] = type;
         i.n[1] = info;
-        MPI_Send(i.n, 2, MPI_INT, proc, 1, MPI_COMM_WORLD);
+        MPI_Send(i.n, 2, MPI_INT, proc, 1, instr_comm.get_comm());
     }
 
     parallelizer::instruction parallelizer::recv_instruction(int proc)
     {
         MPI_Status status;
         instruction i;
-        MPI_Recv(i.n, 2, MPI_INT, proc, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(i.n, 2, MPI_INT, proc, 1, instr_comm.get_comm(), &status);
         return i;
     }
 
     void parallelizer::next_proc(int& proc)
     {
-        proc = (1 + proc) % proc_size;
-    }
-
-    MPI_Request* parallelizer::new_request(message* mes, int proc)
-    {
-        std::pair<message*, int> p(mes, proc);
-        MPI_Request r;
-        requests[p].push_back(r);
-        return &(requests[p][requests[p].size()-1u]);
+        proc = (1 + proc) % comm.get_size();
     }
 
     int parallelizer::get_current_proc()
     {
-        return proc_id;
+        return comm.get_rank();
     }
 
     double parallelizer::get_start_time()

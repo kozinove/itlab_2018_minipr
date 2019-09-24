@@ -8,35 +8,24 @@
 namespace auto_parallel
 {
 
-    struct data
-    {
-        data();
-        virtual ~data() = 0;
-    };
-
     class message
     {
     private:
 
         std::queue<MPI_Request> req_q;
-        void wait_requests();
-
-    protected:
-
-        data* d;
 
     public:
 
         const static bool read_only;
         const static bool read_write;
 
-        message(data* const _d = nullptr);
+        message();
         virtual ~message();
 
-        data* const get_data();
-
-        virtual void send(sender se) = 0;
-        virtual void recv(receiver re) = 0;
+        virtual void send(sender& se) = 0;
+        virtual void recv(receiver& re) = 0;
+        
+        void wait_requests();
 
         friend class intracomm;
 

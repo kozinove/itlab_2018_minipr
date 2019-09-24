@@ -28,8 +28,8 @@ namespace auto_parallel
 
     communicator::~communicator()
     {
-        if (created)
-            MPI_Comm_free(&comm);
+        /*if (created)
+            MPI_Comm_free(&comm);*/
     }
 
     int communicator::get_rank() const
