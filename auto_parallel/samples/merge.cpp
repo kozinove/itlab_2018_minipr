@@ -131,7 +131,6 @@ class merge_t_all: public task
 
 int main(int argc, char** argv)
 {
-    MPI_Init(&argc, &argv);
     int layers = 2;
     int size = 1000;
     if (argc > 1)
@@ -242,7 +241,4 @@ int main(int argc, char** argv)
         cout << dt - pz.get_start_time() << '\n' << pt - dt;
         cout.flush();
     }
-    pz.~parallelizer();
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
 }

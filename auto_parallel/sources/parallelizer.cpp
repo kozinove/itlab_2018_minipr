@@ -3,41 +3,21 @@
 namespace auto_parallel
 {
 
-    double parallelizer::start_time = 0.0;
     const int parallelizer::main_proc = 0;
 
-    parallelizer::parallelizer(int* argc, char*** argv)
+    parallelizer::parallelizer(int* argc, char*** argv): parallel_engine(argc, argv), comm(MPI_COMM_WORLD), instr_comm(comm)
     {
-        int flag;
-        MPI_Initialized(&flag);
-        if (!flag)
-        {
-            MPI_Init(argc, argv);
-            start_time = MPI_Wtime();
-        }
-        start_time = MPI_Wtime();
-        comm = intracomm(MPI_COMM_WORLD);
-        instr_comm = intracomm(comm);
+        
     }
 
-    parallelizer::parallelizer(task_graph& _tg, int* argc, char*** argv)
+    parallelizer::parallelizer(task_graph& _tg, int* argc, char*** argv): parallel_engine(argc, argv), comm(MPI_COMM_WORLD), instr_comm(comm)
     {
-        int flag;
-        MPI_Initialized(&flag);
-        if (!flag)
-        {
-            MPI_Init(argc, argv);
-            start_time = MPI_Wtime();
-        }
-        start_time = MPI_Wtime();
-        comm = intracomm(MPI_COMM_WORLD);
-        instr_comm = intracomm(comm);
         init(_tg);
     }
 
     parallelizer::~parallelizer()
     {
-        //MPI_Finalize();
+
     }
 
     void parallelizer::init(task_graph& _tg)
@@ -366,11 +346,6 @@ namespace auto_parallel
     int parallelizer::get_current_proc()
     {
         return comm.get_rank();
-    }
-
-    double parallelizer::get_start_time()
-    {
-        return start_time;
     }
 
 }

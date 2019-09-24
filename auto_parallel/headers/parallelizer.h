@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include "mpi.h"
+#include "parallel_core.h"
 #include "task_graph.h"
 #include "intracomm.h"
 #include "it_queue.h"
@@ -13,7 +14,7 @@
 namespace auto_parallel
 {
 
-    class parallelizer
+    class parallelizer: public parallel_engine
     {
     private:
 
@@ -39,8 +40,6 @@ namespace auto_parallel
 
         intracomm comm;
         intracomm instr_comm;
-
-        static double start_time;
 
         it_queue<std::pair<int, int>> ready_tasks;
         std::vector<t_info> task_v;
@@ -71,8 +70,6 @@ namespace auto_parallel
         parallelizer(int* argc = NULL, char*** argv = NULL);
         parallelizer(task_graph& _tg, int* argc = NULL, char*** argv = NULL);
         ~parallelizer();
-
-        static double get_start_time();
 
         int get_current_proc();
 

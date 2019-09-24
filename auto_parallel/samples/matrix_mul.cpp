@@ -117,8 +117,6 @@ int main(int argc, char** argv) {
     {
         b[i] = tn--;
     }
-    cout << "fuck\n";
-    MPI_Init(&argc, &argv);
     parallelizer pz(&argc, &argv);
     task_graph gr;
     mymessage* w = new mymessage(m, b);
@@ -160,9 +158,7 @@ int main(int argc, char** argv) {
     if (pz.get_current_proc() == 0)
     {
         double time = MPI_Wtime();
-        cout << time - parallelizer::get_start_time();
+        cout << time - pz.get_start_time();
         //printf("work time: %f\n", time - parallelizer::get_start_time());
     }
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
 }
