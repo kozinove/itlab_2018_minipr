@@ -33,18 +33,12 @@ namespace auto_parallel
     }
 
     int communicator::get_rank() const
-    {
-        return rank;
-    }
+    { return rank; }
 
     MPI_Comm communicator::get_comm() const
-    {
-        return comm;
-    }
+    { return comm; }
 
     int communicator::get_size() const
-    {
-        return comm_size;
-    }
+    { return comm_size; }
 
 }

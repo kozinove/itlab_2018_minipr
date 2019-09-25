@@ -9,32 +9,14 @@ namespace auto_parallel
     template<typename type>
     class it_queue
     {
-        private:
+    private:
 
         static size_t max_size;
         type* _value;
         size_t first, last, _size, _capacity;
         bool full;
 
-        public:
-
-//        class iterator
-//        {
-//            private:
-//            size_t pos, size;
-//            type* ptr;
-//            public:
-//
-//        };
-//
-//        class const_iterator
-//        {
-//            private:
-//            size_t pos, size;
-//            type* ptr;
-//            public:
-//
-//        };
+    public:
 
         it_queue();
         ~it_queue();
@@ -50,11 +32,6 @@ namespace auto_parallel
 
         size_t size();
         size_t capacity();
-
-//        iterator begin();
-//        iterator end();
-//        const_iterator begin() const;
-//        const_iterator end() const;
 
     };
 
@@ -72,15 +49,11 @@ namespace auto_parallel
 
     template<typename type>
     it_queue<type>::~it_queue()
-    {
-
-    }
+    { delete[] _value; }
 
     template<typename type>
     const type& it_queue<type>::front()
-    {
-        return _value[first];
-    }
+    { return _value[first]; }
 
     template<typename type>
     void it_queue<type>::push(const type& val)
@@ -122,33 +95,23 @@ namespace auto_parallel
 
     template<typename type>
     type& it_queue<type>::operator[](size_t n)
-    {
-        return _value[(first + n) % _capacity];
-    }
+    { return _value[(first + n) % _capacity]; }
 
     template<typename type>
     const type& it_queue<type>::operator[](size_t n) const
-    {
-        return _value[(first + n) % _capacity];
-    }
+    { return _value[(first + n) % _capacity]; }
 
     template<typename type>
     bool it_queue<type>::empty()
-    {
-        return (first == last) && (!full);
-    }
+    { return (first == last) && (!full); }
 
     template<typename type>
     size_t it_queue<type>::size()
-    {
-        return _size;
-    }
+    { return _size; }
 
     template<typename type>
     size_t it_queue<type>::capacity()
-    {
-        return _capacity;
-    }
+    { return _capacity; }
 
 }
 #endif // __IT_QUEUE__

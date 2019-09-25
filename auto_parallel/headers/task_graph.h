@@ -22,9 +22,7 @@ namespace auto_parallel
             const int id;
             int ref_count;
             d_id(const int nid = 0): id(nid)
-            {
-                ref_count = 0;
-            }
+            { ref_count = 0; }
         };
 
         struct t_id
@@ -33,15 +31,14 @@ namespace auto_parallel
             std::set<task*> childs;
             std::set<task*> parents;
             t_id(const int nid = 0): id(nid)
-            {
-
-            }
+            { }
         };
 
         std::map<task*, t_id> t_map;
         std::map<message*, d_id> d_map;
 
     public:
+
         task_graph();
         task_graph(const task_graph& _tg);
         task_graph& operator =(const task_graph& _tg);

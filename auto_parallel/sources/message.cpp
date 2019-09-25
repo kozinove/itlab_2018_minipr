@@ -7,14 +7,10 @@ namespace auto_parallel
     const bool message::read_write = false;
 
     message::message()
-    {
-
-    }
+    { }
 
     message::~message()
-    {
-
-    }
+    { }
 
     void message::wait_requests()
     {

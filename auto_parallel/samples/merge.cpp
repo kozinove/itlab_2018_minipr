@@ -32,30 +32,20 @@ class m_array: public message
             delete[] p;
     }
     void send(sender& se)
-    {
-        se.isend(p, size, MPI_INT);
-    }
+    { se.isend(p, size, MPI_INT); }
     void recv(receiver& re)
-    {
-        re.irecv(p, size, MPI_INT);
-    }
+    { re.irecv(p, size, MPI_INT); }
     int* get_p()
-    {
-        return p;
-    }
+    { return p; }
     int get_size()
-    {
-        return size;
-    }
+    { return size; }
 };
 
 class merge_t: public task
 {
     public:
     merge_t(vector<message*> vm, vector<bool> vb): task(vm, vb)
-    {
-
-    }
+    { }
     void perform()
     {
         m_array* s1, *s2, *out;
@@ -76,26 +66,18 @@ class merge_t: public task
         }
     }
     m_array* get_out()
-    {
-        return (m_array*)data_v[2];
-    }
+    { return (m_array*)data_v[2]; }
     m_array* get_first()
-    {
-        return (m_array*)data_v[0];
-    }
+    { return (m_array*)data_v[0]; }
     m_array* get_second()
-    {
-        return (m_array*)data_v[1];
-    }
+    { return (m_array*)data_v[1]; }
 };
 
 class merge_t_all: public task
 {
     public:
     merge_t_all(vector<message*> vm, vector<bool> vb): task(vm, vb)
-    {
-
-    }
+    { }
     void perform()
     {
         m_array* s1, *s2;

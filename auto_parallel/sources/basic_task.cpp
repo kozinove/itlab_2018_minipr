@@ -4,9 +4,7 @@ namespace auto_parallel
 {
 
     task::task()
-    {
-
-    }
+    { }
 
     task::task(message* dat)
     {
@@ -36,8 +34,6 @@ namespace auto_parallel
     }
 
     task::~task()
-    {
-
-    }
+    { }
 
 }

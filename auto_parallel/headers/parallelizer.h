@@ -19,9 +19,7 @@ namespace auto_parallel
     private:
 
         struct instruction
-        {
-            int n[2];
-        };
+        { int n[2]; };
 
         struct d_info
         {
@@ -50,22 +48,22 @@ namespace auto_parallel
         void master();
         void worker();
         void sequential_execution();
-        // executes 1 chosen task
+
         void execute_task(int task_id);
-        // main process wait execution of task by worker
+
         void wait_proc(int task_id, int proc, std::vector<std::set<int>>& v);
-        // different sends
+
         void send_instruction(int type, int proc, int info = 0);
         instruction recv_instruction(int proc);
 
         void send_task_data(int tid, int proc, std::vector<std::set<int>>& ver);
         void recv_task_data(int tid, int proc);
-        // give ids of workers cyclically
+
         void next_proc(int& proc);
 
     public:
 
-        const static int main_proc; // 0
+        const static int main_proc;
 
         parallelizer(int* argc = NULL, char*** argv = NULL);
         parallelizer(task_graph& _tg, int* argc = NULL, char*** argv = NULL);
@@ -73,8 +71,8 @@ namespace auto_parallel
 
         int get_current_proc();
 
-        void init(task_graph& _tg); // initialization with tasks
-        // starts execution of all tasks
+        void init(task_graph& _tg);
+
         void execution();
 
     };

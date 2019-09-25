@@ -26,8 +26,6 @@ namespace auto_parallel
     }
 
     double parallel_engine::get_start_time()
-    {
-        return start_time;
-    }
+    { return start_time; }
 
 }

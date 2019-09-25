@@ -6,19 +6,13 @@ namespace auto_parallel
     const int parallelizer::main_proc = 0;
 
     parallelizer::parallelizer(int* argc, char*** argv): parallel_engine(argc, argv), comm(MPI_COMM_WORLD), instr_comm(comm)
-    {
-        
-    }
+    { }
 
     parallelizer::parallelizer(task_graph& _tg, int* argc, char*** argv): parallel_engine(argc, argv), comm(MPI_COMM_WORLD), instr_comm(comm)
-    {
-        init(_tg);
-    }
+    { init(_tg); }
 
     parallelizer::~parallelizer()
-    {
-
-    }
+    { }
 
     void parallelizer::init(task_graph& _tg)
     {
@@ -37,9 +31,7 @@ namespace auto_parallel
         unsigned i = 0;
 
         for (auto it = _tg.d_map.begin(); it != _tg.d_map.end(); ++it)
-        {
             dmpr[(*it).second.id] = (*it).first;
-        }
 
         for (auto it = dmpr.begin(); it != dmpr.end(); ++it, ++i)
         {
@@ -50,9 +42,7 @@ namespace auto_parallel
         dmpr.clear();
 
         for (auto it = _tg.t_map.begin(); it != _tg.t_map.end(); ++it)
-        {
             tmpr[(*it).second.id] = (*it).first;
-        }
 
         i = 0;
         for (auto it = tmpr.begin(); it != tmpr.end(); ++it, ++i)
@@ -130,7 +120,7 @@ namespace auto_parallel
 
         while (ready_tasks.size())
         {
-            // data sending
+
             for (int i = start_task; i < ready_tasks.size(); ++i)
             {
                 if (ready_tasks[i].second == -1)
@@ -146,7 +136,7 @@ namespace auto_parallel
                 ++start_task;
             }
             start_task -= (int)ready_procs.size() + 1;
-            // task sending
+
             while (ready_tasks.size())
             {
                 std::pair<int,int> cur_t = ready_tasks.front();
@@ -187,7 +177,7 @@ namespace auto_parallel
             }
             else
                 start_task += 1;
-            // task waiting
+
             while (working_procs.size())
             {
                 std::pair<int,int> p = working_procs.front();
@@ -339,13 +329,9 @@ namespace auto_parallel
     }
 
     void parallelizer::next_proc(int& proc)
-    {
-        proc = (1 + proc) % comm.get_size();
-    }
+    { proc = (1 + proc) % comm.get_size(); }
 
     int parallelizer::get_current_proc()
-    {
-        return comm.get_rank();
-    }
+    { return comm.get_rank(); }
 
 }

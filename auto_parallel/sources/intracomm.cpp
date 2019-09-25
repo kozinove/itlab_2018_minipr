@@ -4,24 +4,16 @@ namespace auto_parallel
 {
 
     intracomm::intracomm(MPI_Comm _comm): communicator(_comm)
-    {
-
-    }
+    { }
 
     intracomm::intracomm(const intracomm& c): communicator(c)
-    {
-
-    }
+    { }
 
     intracomm::intracomm(const intracomm& c, int color, int key): communicator(c, color, key)
-    {
-
-    }
+    { }
 
     intracomm::~intracomm()
-    {
-
-    }
+    { }
 
     void intracomm::send(message* mes, int proc)
     {
