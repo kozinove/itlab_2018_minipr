@@ -59,14 +59,16 @@ namespace auto_parallel
         {
             const std::set<task*>& tp = (*_tg.t_map.find(task_v[i].t)).second.childs;
             task_v[i].childs.resize(tp.size());
-            unsigned j = 0;
+            size_t j = 0;
             for (auto it = tp.begin(); it != tp.end(); ++it, ++j)
                 task_v[i].childs[j] = tmp[*it];
-            for (j = 0; j < task_v[i].t->data_v.size(); ++j)
-                if (task_v[i].t->mods[j] == message::read_write)
-                    task_v[i].data_id.push_back(dmp[task_v[i].t->data_v[j]]);
-                else
-                    task_v[i].const_data_id.push_back(dmp[task_v[i].t->data_v[j]]);
+            for (j = 0; j < task_v[i].t->data.size(); ++j)
+                task_v[i].data_id.push_back(dmp[task_v[i].t->data[j]]);
+            for (j = 0; j < task_v[i].t->c_data.size(); ++j)
+            {
+                message* t = const_cast<message*>(task_v[i].t->c_data[j]);
+                task_v[i].const_data_id.push_back(dmp[t]);
+            }
         }
         _tg.clear();
 
@@ -217,15 +219,14 @@ namespace auto_parallel
     {
         std::vector<int>& d = task_v[tid].data_id;
         std::vector<int>& cd = task_v[tid].const_data_id;
-        int* low_versions = new int[d.size() + cd.size()];
-        size_t size = 0;
+        std::vector<int> low_versions;
 
         for (int i = 0; i < d.size(); ++i)
         {
             if (ver[d[i]].find(proc) == ver[d[i]].end())
             {
                 ver[d[i]].insert(proc);
-                low_versions[size++] = d[i];
+                low_versions.push_back(d[i]);
             }
         }
         for (int i = 0; i < cd.size(); ++i)
@@ -233,16 +234,15 @@ namespace auto_parallel
             if (ver[cd[i]].find(proc) == ver[cd[i]].end())
             {
                 ver[cd[i]].insert(proc);
-                low_versions[size++] = cd[i];
+                low_versions.push_back(cd[i]);
             }
         }
 
-        MPI_Send(low_versions, size, MPI_INT, proc, 3, instr_comm.get_comm());
+        MPI_Send(low_versions.data(), low_versions.size(), MPI_INT, proc, 3, instr_comm.get_comm());
 
-        for (int i = 0; i < size; ++i)
+        for (int i = 0; i < low_versions.size(); ++i)
             comm.send(data_v[low_versions[i]].d, proc);
 
-        delete[] low_versions;
     }
 
     void parallelizer::wait_proc(int task_id, int proc, std::vector<std::set<int>>& v)

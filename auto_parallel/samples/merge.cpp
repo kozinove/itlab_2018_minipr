@@ -11,7 +11,7 @@ using namespace auto_parallel;
 
 class m_array: public message
 {
-    private:
+private:
     int* p;
     int size;
     bool res;
@@ -33,25 +33,29 @@ class m_array: public message
     }
     void send(sender& se)
     { se.isend(p, size, MPI_INT); }
+
     void recv(receiver& re)
     { re.irecv(p, size, MPI_INT); }
-    int* get_p()
+
+    int* get_p() const
     { return p; }
-    int get_size()
+
+    int get_size() const
     { return size; }
 };
 
 class merge_t: public task
 {
-    public:
-    merge_t(vector<message*> vm, vector<bool> vb): task(vm, vb)
+public:
+    merge_t(vector<message*> vm, vector<const message*> cvm): task(vm, cvm)
     { }
     void perform()
     {
-        m_array* s1, *s2, *out;
-        s1 = (m_array*)data_v[0];
-        s2 = (m_array*)data_v[1];
-        out = (m_array*)data_v[2];
+        const m_array* s1, *s2;
+        m_array* out;
+        s1 = (const m_array*)c_data[0];
+        s2 = (const m_array*)c_data[1];
+        out = (m_array*)data[0];
 
         int first = 0, second = 0;
         int* p_out = out->get_p();
@@ -65,24 +69,28 @@ class merge_t: public task
                 p_out[i] = s1->get_p()[first++];
         }
     }
+
     m_array* get_out()
-    { return (m_array*)data_v[2]; }
+    { return (m_array*)data[0]; }
+
     m_array* get_first()
-    { return (m_array*)data_v[0]; }
+    { return (m_array*)c_data[0]; }
+
     m_array* get_second()
-    { return (m_array*)data_v[1]; }
+    { return (m_array*)c_data[1]; }
+
 };
 
 class merge_t_all: public task
 {
-    public:
-    merge_t_all(vector<message*> vm, vector<bool> vb): task(vm, vb)
+public:
+    merge_t_all(vector<message*> vm): task(vm)
     { }
     void perform()
     {
         m_array* s1, *s2;
-        s1 = (m_array*)data_v[0];
-        s2 = (m_array*)data_v[1];
+        s1 = (m_array*)data[0];
+        s2 = (m_array*)data[1];
         for (int i = 0; i < s1->get_size(); ++i)
             s2->get_p()[i] = s1->get_p()[i];
         merge_it(s1->get_p(), s2->get_p(), s1->get_size()/2, s1->get_size());
@@ -132,21 +140,20 @@ int main(int argc, char** argv)
 
     parallelizer pz;
     task_graph tg;
+
     vector<task*> v1, v2;
     int g = 1 << layers;
     if (layers != 0)
     {
         if (layers % 2 == 0)
             swap(p1,p2);
-        vector<message*> w(3);
-        vector<bool> e(3);
-        w[0] = new m_array(size / 2, p2);
-        w[1] = new m_array(size - size / 2, p2 + size / 2);
-        w[2] = new m_array(size, p1);
-        e[0] = message::read_only;
-        e[1] = message::read_only;
-        e[2] = message::read_write;
-        v2.push_back(new merge_t(w, e));
+        vector<message*> w(1);
+        vector<const message*> cw(2);
+        cw[0] = new m_array(size / 2, p2);
+        cw[1] = new m_array(size - size / 2, p2 + size / 2);
+        w[0] = new m_array(size, p1);
+        v2.push_back(new merge_t(w, cw));
+
         for (int i = 1; i < layers; ++i)
         {
             int q = 1 << i;
@@ -165,42 +172,37 @@ int main(int argc, char** argv)
                     me = ((merge_t*)v2[j/2])->get_first();
                     ptr = ((merge_t*)v2[j/2])->get_out()->get_p();
                 }
-                w[0] = new m_array(me->get_size() / 2, ptr);
-                w[1] = new m_array(me->get_size() - me->get_size() / 2, ptr + me->get_size() / 2);
-                w[2] = me;
-                e[0] = message::read_only;
-                e[1] = message::read_only;
-                e[2] = message::read_write;
-                v1[j] = new merge_t(w, e);
+
+                cw[0] = new m_array(me->get_size() / 2, ptr);
+
+                cw[1] = new m_array(me->get_size() - me->get_size() / 2, ptr + me->get_size() / 2);
+                w[0] = me;
+
+                v1[j] = new merge_t(w, cw);
+
                 tg.add_dependence(v1[j], v2[j/2]);
             }
             swap(v1, v2);
         }
-        w.clear();
-        e.clear();
+
         w.resize(2);
-        e.resize(2);
-        e[0] = e[1] = message::read_write;
         for (int i = 0; i < v2.size(); ++i)
         {
             w[0] = new m_array(((merge_t*)v2[i])->get_first()->get_size(), ((merge_t*)v2[i])->get_out()->get_p());
             w[1] = ((merge_t*)v2[i])->get_first();
-            tg.add_dependence(new merge_t_all(w, e), v2[i]);
+            tg.add_dependence(new merge_t_all(w), v2[i]);
             w[0] = new m_array(((merge_t*)v2[i])->get_second()->get_size(), ((merge_t*)v2[i])->get_out()->get_p()
                 + ((merge_t*)v2[i])->get_first()->get_size());
             w[1] = ((merge_t*)v2[i])->get_second();
-            tg.add_dependence(new merge_t_all(w, e), v2[i]);
+            tg.add_dependence(new merge_t_all(w), v2[i]);
         }
     }
     else
     {
         vector<message*> w(2);
-        vector<bool> e(2);
         w[0] = new m_array(size, p1);
         w[1] = new m_array(size, p2);
-        e[0] = message::read_write;
-        e[1] = message::read_write;
-        tg.add_task(new merge_t_all(w, e));
+        tg.add_task(new merge_t_all(w));
         swap(p1, p2);
     }
 

@@ -3,6 +3,7 @@
 
 #include "message.h"
 #include <vector>
+#include <functional>
 
 namespace auto_parallel
 {
@@ -11,19 +12,21 @@ namespace auto_parallel
     {
     protected:
 
-        std::vector<message*> data_v;
-        std::vector<bool> mods;
+        std::vector<message*> data;
+        std::vector<const message*> c_data;
 
     public:
 
-        task();
-        task(message* dat);
-        task(message* dat, bool mode);
-        task(std::vector<message*>& mes_v);
-        task(std::vector<message*>& mes_v, std::vector<bool>& mode_v);
+        task(std::vector<message*>& mes_v = std::vector<message*>::vector(), std::vector<const message*>& c_mes_v = std::vector<const message*>::vector());
 
         virtual ~task();
         virtual void perform() = 0;
+
+        void put(message* mes);
+        void put_c(const message* mes);
+
+        message* get(size_t id);
+        const message* get_c(size_t id);
 
         friend class task_graph;
         friend class parallelizer;

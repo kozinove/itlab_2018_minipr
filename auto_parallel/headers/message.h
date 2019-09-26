@@ -16,9 +16,6 @@ namespace auto_parallel
 
     public:
 
-        const static bool read_only;
-        const static bool read_write;
-
         message();
         virtual ~message();
 

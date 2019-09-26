@@ -45,14 +45,14 @@ public:
 class mytask: public task
 {
 public:
-    mytask(std::vector<message*>& mes_v, std::vector<bool>& mode_v): task(mes_v, mode_v)
+    mytask(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v): task(mes_v, cmes_v)
     { }
     void perform()
     {
-        int*& a = ((mymessage*)data_v[0])->arr;
-        int*& b = ((mymessage*)data_v[1])->arr;
-        int& c = ((onemessage*)data_v[2])->a;
-        int size = ((mymessage*)data_v[0])->size;
+        int*& a = ((mymessage*)c_data[0])->arr;
+        int*& b = ((mymessage*)c_data[1])->arr;
+        int& c = ((onemessage*)data[0])->a;
+        int size = ((mymessage*)data[0])->size;
         for(int i = 0; i < size; i++)
             c += a[i]*b[i];
     }
@@ -61,31 +61,32 @@ public:
 class out_task: public task
 {
 public:
-    out_task(std::vector<message*>& mes_v, std::vector<bool>& mode_v): task(mes_v, mode_v)
+    out_task(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v): task(mes_v, cmes_v)
     { }
     void perform()
     {
-        int*& a = ((mymessage*)data_v[0])->arr;
-        int size = ((mymessage*)data_v[0])->size;
-        for(int i = 1; i <= size; i++)
-            a[i - 1] = ((onemessage*)data_v[i])->a;
+        int*& a = ((mymessage*)data[0])->arr;
+        int size = ((mymessage*)data[0])->size;
+        for(int i = 0; i < size; i++)
+            a[i] = ((onemessage*)c_data[i])->a;
     }
 };
 
 class init_task : public task
 {
     public:
-    init_task(std::vector<message*>& mes_v, std::vector<bool>& mode_v) : task(mes_v, mode_v) {}
+    init_task(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v) : task(mes_v, cmes_v)
+    { }
     void perform()
     {
-        int*& a = ((mymessage*)data_v[0])->arr;
+        int*& a = ((mymessage*)data[0])->arr;
         a = new int[size_t(n) * m];
         int tn = 0;
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < m; j++)
                 a[i * m + j] = tn++;
-            ((mymessage*)data_v[i])->arr = a + size_t(i) * size_t(m);
+            ((mymessage*)data[i])->arr = a + size_t(i) * size_t(m);
         }
     }
 };
@@ -111,31 +112,25 @@ int main(int argc, char** argv)
     mymessage* cw = new mymessage(n, c);
     mytask** t = new mytask*[n];
     vector<message*> ve;
-    vector<bool> be;
+    vector<const message*> cve;
     vector<message*> vi;
-    vector<bool> bi;
+    vector<const message*> cvi;
     ve.push_back(cw);
-    be.push_back(message::read_write);
     for (int i = 0; i < n; ++i)
     {
         mymessage* p = new mymessage(m, nullptr);
         onemessage* q = new onemessage(0);
         vector<message*> v;
-        vector<bool> e;
-        v.push_back(p);
-        v.push_back(w);
+        vector<const message*> cv;
+        cv.push_back(p);
+        cv.push_back(w);
         v.push_back(q);
-        e.push_back(message::read_only);
-        e.push_back(message::read_only);
-        e.push_back(message::read_write);
-        ve.push_back(q);
-        be.push_back(message::read_only);
-        t[i] = new mytask(v,e);
+        cve.push_back(q);
+        t[i] = new mytask(v,cv);
         vi.push_back(p);
-        bi.push_back(message::read_write);
     }
-    out_task* te = new out_task(ve,be);
-    init_task * ti = new init_task(vi, bi);
+    out_task* te = new out_task(ve,cve);
+    init_task * ti = new init_task(vi, cvi);
     for (int i = 0; i < n; ++i)
     {
         gr.add_dependence(t[i], te);

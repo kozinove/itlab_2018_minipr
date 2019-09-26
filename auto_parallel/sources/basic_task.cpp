@@ -3,37 +3,22 @@
 namespace auto_parallel
 {
 
-    task::task()
+    task::task(std::vector<message*>& mes_v, std::vector<const message*>& c_mes_v): data(mes_v), c_data(c_mes_v)
     { }
-
-    task::task(message* dat)
-    {
-        data_v.push_back(dat);
-        mods.push_back(message::read_write);
-    }
-
-    task::task(message* dat, bool mode)
-    {
-        data_v.push_back(dat);
-        mods.push_back(mode);
-    }
-
-    task::task(std::vector<message*>& mes_v)
-    {
-        data_v = mes_v;
-        mods.resize(data_v.size());
-        mods.assign(mods.size(), message::read_write);
-    }
-
-    task::task(std::vector<message*>& mes_v, std::vector<bool>& mode_v)
-    {
-        if (mes_v.size() != mode_v.size())
-            throw -4;
-        data_v = mes_v;
-        mods = mode_v;
-    }
 
     task::~task()
     { }
+
+    void task::put(message* mes)
+    { data.push_back(mes); }
+
+    void task::put_c(const message* mes)
+    { c_data.push_back(mes); }
+
+    message* task::get(size_t id)
+    { return data[id]; }
+
+    const message* task::get_c(size_t id)
+    { return c_data[id]; }
 
 }

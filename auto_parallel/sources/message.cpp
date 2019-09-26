@@ -3,9 +3,6 @@
 namespace auto_parallel
 {
 
-    const bool message::read_only = true;
-    const bool message::read_write = false;
-
     message::message()
     { }
 

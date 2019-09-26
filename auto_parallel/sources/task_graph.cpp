@@ -31,8 +31,15 @@ namespace auto_parallel
             throw -3;
         if (t_map.find(t) != t_map.end())
             throw -1;
-        for (message* i:t->data_v)
+        for (message* i:t->data)
         {
+            if (d_map.find(i) == d_map.end())
+                d_map.insert(std::make_pair(i, d_id(base_data_id++)));
+            ++d_map[i].ref_count;
+        }
+        for (const message* j : t->c_data)
+        {
+            message* i = const_cast<message*>(j);
             if (d_map.find(i) == d_map.end())
                 d_map.insert(std::make_pair(i, d_id(base_data_id++)));
             ++d_map[i].ref_count;
@@ -69,10 +76,19 @@ namespace auto_parallel
         tmp = t_map[t].parents;
         for (auto it = tmp.begin(); it != tmp.end(); ++it)
             t_map[(*it)].childs.erase(t);
-        for (message* i:t->data_v)
+        for (message* i:t->data)
         {
             if (d_map.find(i) == d_map.end())
                 throw -4;
+            --d_map[i].ref_count;
+            if (d_map[i].ref_count < 1)
+                d_map.erase(i);
+        }
+        for (const message* j : t->c_data)
+        {
+            message* i = const_cast<message*>(j);
+            if (d_map.find(i) == d_map.end())
+                throw - 4;
             --d_map[i].ref_count;
             if (d_map[i].ref_count < 1)
                 d_map.erase(i);
@@ -120,7 +136,7 @@ namespace auto_parallel
             t_map[(*it)].childs.erase(old_t);
             t_map[(*it)].childs.insert(new_t);
         }
-        for (message* i:old_t->data_v)
+        for (message* i:old_t->data)
         {
             if (d_map.find(i) == d_map.end())
                 throw -4;
@@ -128,8 +144,24 @@ namespace auto_parallel
             if (d_map[i].ref_count < 1)
                 d_map.erase(i);
         }
-        for (message* i:new_t->data_v)
+        for (message* i:new_t->data)
         {
+            if (d_map.find(i) == d_map.end())
+                d_map.insert(std::make_pair(i, d_id(base_data_id++)));
+            ++d_map[i].ref_count;
+        }
+        for (const message* j : old_t->c_data)
+        {
+            message* i = const_cast<message*>(j);
+            if (d_map.find(i) == d_map.end())
+                throw - 4;
+            --d_map[i].ref_count;
+            if (d_map[i].ref_count < 1)
+                d_map.erase(i);
+        }
+        for (const message* j : new_t->c_data)
+        {
+            message* i = const_cast<message*>(j);
             if (d_map.find(i) == d_map.end())
                 d_map.insert(std::make_pair(i, d_id(base_data_id++)));
             ++d_map[i].ref_count;
