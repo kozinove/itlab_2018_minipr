@@ -25,8 +25,8 @@ namespace auto_parallel
         void put(message* mes);
         void put_c(const message* mes);
 
-        message* get(size_t id);
-        const message* get_c(size_t id);
+        message& get_a(size_t id);
+        const message& get_c(size_t id);
 
         friend class task_graph;
         friend class parallelizer;

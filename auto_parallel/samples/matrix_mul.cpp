@@ -9,7 +9,7 @@
 using namespace std;
 using namespace auto_parallel;
 
-int n = 100, m = 50;
+int n = 100, m = 50, layers = 8;
 
 class mymessage: public message
 {
@@ -28,13 +28,38 @@ public:
     }
 };
 
+class matrix_part: public message
+{
+public:
+    int** arr;
+    int size, length;
+    matrix_part(int _l, int _s): message(), length(_l), size(_s)
+    {
+        arr = new int*[size];
+        arr[0] = nullptr;
+    }
+    void send(sender& se)
+    { se.isend(arr[0], size * length, MPI_INT); }
+
+    void recv(receiver& re)
+    {
+        if (arr[0] == nullptr)
+        {
+            arr[0] = new int[size * length];
+            for (int i = 0; i < size; ++i)
+                arr[i] = arr[0] + length * i;
+        }
+        re.irecv(arr[0], size * length, MPI_INT);
+    }
+};
+
 
 class onemessage: public message
 {
 public:
     int a;
     onemessage(int _a): message(), a(_a)
-    {   }
+    { }
     void send(sender& se)
     { se.isend(&a, 1, MPI_INT); }
     void recv(receiver& re)
@@ -49,12 +74,15 @@ public:
     { }
     void perform()
     {
-        int*& a = ((mymessage*)c_data[0])->arr;
-        int*& b = ((mymessage*)c_data[1])->arr;
-        int& c = ((onemessage*)data[0])->a;
-        int size = ((mymessage*)data[0])->size;
-        for(int i = 0; i < size; i++)
-            c += a[i]*b[i];
+        const matrix_part& mp = (const matrix_part&)get_c(0);
+        const mymessage& vb = (const mymessage&)get_c(1);
+        mymessage& c = (mymessage&)get_a(0);
+        for (int i = 0; i < mp.size; ++i)
+        {
+            c.arr[i] = 0;
+            for (int j = 0; j < mp.length; ++j)
+                c.arr[i] += mp.arr[i][j] * vb.arr[j];
+        }
     }
 };
 
@@ -65,28 +93,40 @@ public:
     { }
     void perform()
     {
-        int*& a = ((mymessage*)data[0])->arr;
+        int* a = ((mymessage*)data[0])->arr;
         int size = ((mymessage*)data[0])->size;
-        for(int i = 0; i < size; i++)
-            a[i] = ((onemessage*)c_data[i])->a;
+        for(int i = 0; i < layers; i++)
+        {
+            mymessage& me = *((mymessage*)c_data[i]);
+            for (int j = 0; j < me.size; ++j)
+                a[j] = me.arr[j];
+            a += me.size;
+        }
     }
 };
 
 class init_task : public task
 {
     public:
-    init_task(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v) : task(mes_v, cmes_v)
+    init_task(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v): task(mes_v, cmes_v)
     { }
     void perform()
     {
-        int*& a = ((mymessage*)data[0])->arr;
-        a = new int[size_t(n) * m];
+        int**& a = ((matrix_part*)data[0])->arr;
+        a[0] = new int[size_t(n) * m];
+        int* b = a[0];
         int tn = 0;
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < layers; i++)
         {
-            for (int j = 0; j < m; j++)
-                a[i * m + j] = tn++;
-            ((mymessage*)data[i])->arr = a + size_t(i) * size_t(m);
+            int& s = ((matrix_part*)data[i])->size;
+            int& l = ((matrix_part*)data[i])->length;
+            for (int j = 0; j < s; ++j)
+            {
+                ((matrix_part*)data[i])->arr[j] = b + j * l;
+                for (int k = 0; k < l; ++k)
+                   b[j * l + k] = tn++;
+            }
+            b += s * l;
         }
     }
 };
@@ -97,7 +137,11 @@ int main(int argc, char** argv)
     {
         n = atoi(argv[1]);
         if (argc > 2)
+        {
             m = atoi(argv[2]);
+            if (argc > 3)
+                layers = atoi(argv[3]);
+        }
     }
     int* b, *c;
     b = new int[m];
@@ -110,16 +154,21 @@ int main(int argc, char** argv)
     task_graph gr;
     mymessage* w = new mymessage(m, b);
     mymessage* cw = new mymessage(n, c);
-    mytask** t = new mytask*[n];
+    mytask** t = new mytask*[layers];
     vector<message*> ve;
     vector<const message*> cve;
     vector<message*> vi;
     vector<const message*> cvi;
     ve.push_back(cw);
-    for (int i = 0; i < n; ++i)
+    int div = n / layers;
+    int mod = n % layers;
+    for (int i = 0; i < layers; ++i)
     {
-        mymessage* p = new mymessage(m, nullptr);
-        onemessage* q = new onemessage(0);
+        int g = div;
+        if (i == layers - 1)
+            g += mod;
+        matrix_part* p = new matrix_part(m, g);
+        mymessage* q = new mymessage(div, new int[g]);
         vector<message*> v;
         vector<const message*> cv;
         cv.push_back(p);
@@ -131,7 +180,7 @@ int main(int argc, char** argv)
     }
     out_task* te = new out_task(ve,cve);
     init_task * ti = new init_task(vi, cvi);
-    for (int i = 0; i < n; ++i)
+    for (int i = 0; i < layers; ++i)
     {
         gr.add_dependence(t[i], te);
         gr.add_dependence(ti, t[i]);

@@ -15,10 +15,10 @@ namespace auto_parallel
     void task::put_c(const message* mes)
     { c_data.push_back(mes); }
 
-    message* task::get(size_t id)
-    { return data[id]; }
+    message& task::get_a(size_t id)
+    { return *data[id]; }
 
-    const message* task::get_c(size_t id)
-    { return c_data[id]; }
+    const message& task::get_c(size_t id)
+    { return *c_data[id]; }
 
 }
