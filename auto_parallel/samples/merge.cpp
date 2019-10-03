@@ -16,6 +16,12 @@ private:
     int size;
     bool res;
     public:
+
+    struct init_info: public init_info_base
+    {
+
+    };
+
     m_array(int sz, int* pt = nullptr): size(sz), p(pt)
     {
         if (p == nullptr)
@@ -47,6 +53,8 @@ private:
 class merge_t: public task
 {
 public:
+    merge_t(): task()
+    { }
     merge_t(vector<message*> vm, vector<const message*> cvm): task(vm, cvm)
     { }
     void perform()
@@ -84,6 +92,8 @@ public:
 class merge_t_all: public task
 {
 public:
+    merge_t_all(): task()
+    { }
     merge_t_all(vector<message*> vm): task(vm)
     { }
     void perform()
@@ -140,6 +150,12 @@ int main(int argc, char** argv)
 
     parallelizer pz;
     task_graph tg;
+
+    task_giver<merge_t> wqww;
+
+    task_factory::add<merge_t>();
+    task_factory::add<merge_t_all>();
+    task* tttu = task_factory::get(0);
 
     vector<task*> v1, v2;
     int g = 1 << layers;
