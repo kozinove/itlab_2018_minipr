@@ -19,7 +19,7 @@ private:
 
     struct init_info: public init_info_base
     {
-
+        
     };
 
     m_array(int sz, int* pt = nullptr): size(sz), p(pt)

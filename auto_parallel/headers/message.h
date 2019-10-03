@@ -99,7 +99,7 @@ namespace auto_parallel
 
     template<typename Type>
     int message_giver<Type>::get_id()
-    { return my_id }
+    { return my_id; }
 
     class message_factory
     {
