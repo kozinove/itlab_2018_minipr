@@ -15,21 +15,21 @@ namespace auto_parallel
     intracomm::~intracomm()
     { }
 
-    void intracomm::send(message* mes, int proc)
+    void intracomm::send(sendable* mes, int proc)
     {
         mes->wait_requests();
         sender se(comm, proc, &(mes->req_q));
         mes->send(se);
     }
 
-    void intracomm::recv(message* mes, int proc)
+    void intracomm::recv(sendable* mes, int proc)
     {
         mes->wait_requests();
         receiver re(comm, proc, &(mes->req_q));
         mes->recv(re);
     }
 
-    void intracomm::bcast(message* mes, int proc)
+    void intracomm::bcast(sendable* mes, int proc)
     {
         int my_pos = (rank - proc + comm_size) % comm_size;
         int i = 1;

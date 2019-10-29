@@ -37,10 +37,10 @@ private:
         if (res)
             delete[] p;
     }
-    void send(sender& se)
+    void send(const sender& se)
     { se.isend(p, size, MPI_INT); }
 
-    void recv(receiver& re)
+    void recv(const receiver& re)
     { re.irecv(p, size, MPI_INT); }
 
     int* get_p() const
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
     parallelizer pz;
     task_graph tg;
 
-    task_giver<merge_t> wqww;
+    task_creator<merge_t> wqww;
 
     task_factory::add<merge_t>();
     task_factory::add<merge_t_all>();

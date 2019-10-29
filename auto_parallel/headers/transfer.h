@@ -14,17 +14,17 @@ namespace auto_parallel
 
         MPI_Comm comm;
         int proc;
-        int tag;
+        mutable int tag;
         std::queue<MPI_Request>* q;
 
     public:
 
         sender(MPI_Comm _comm, int _proc, std::queue<MPI_Request>* _q);
 
-        void send(void* buf, int size, MPI_Datatype type);
-        void isend(void* buf, int size, MPI_Datatype type);
-        void big_send(void* buf, size_t size, MPI_Datatype type);
-        void big_isend(void* buf, size_t size, MPI_Datatype type);
+        void send(void* buf, int size, MPI_Datatype type) const;
+        void isend(void* buf, int size, MPI_Datatype type) const;
+        void big_send(void* buf, size_t size, MPI_Datatype type) const;
+        void big_isend(void* buf, size_t size, MPI_Datatype type) const;
 
     };
 
@@ -34,17 +34,18 @@ namespace auto_parallel
 
         MPI_Comm comm;
         int proc;
-        int tag;
+        mutable int tag;
         std::queue<MPI_Request>* q;
 
     public:
 
         receiver(MPI_Comm _comm, int _proc, std::queue<MPI_Request>* _q);
 
-        void recv(void* buf, int size, MPI_Datatype type);
-        void irecv(void* buf, int size, MPI_Datatype type);
-        void big_recv(void* buf, size_t size, MPI_Datatype type);
-        void big_irecv(void* buf, size_t size, MPI_Datatype type);
+        void recv(void* buf, int size, MPI_Datatype type) const;
+        void irecv(void* buf, int size, MPI_Datatype type) const;
+        int probe(MPI_Datatype type) const;
+        void big_recv(void* buf, size_t size, MPI_Datatype type) const;
+        void big_irecv(void* buf, size_t size, MPI_Datatype type) const;
 
     };
 

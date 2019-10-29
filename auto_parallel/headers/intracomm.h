@@ -19,9 +19,9 @@ namespace auto_parallel
         intracomm(const intracomm& c, int color, int key);
         ~intracomm();
 
-        void send(message* mes, int proc);
-        void recv(message* mes, int proc);
-        void bcast(message* mes, int proc);
+        void send(sendable* mes, int proc);
+        void recv(sendable* mes, int proc);
+        void bcast(sendable* mes, int proc);
 
     };
 

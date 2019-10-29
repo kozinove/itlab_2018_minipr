@@ -18,9 +18,9 @@ public:
     int* arr;
     mymessage(int _size, int* _arr): message(), size(_size), arr(_arr)
     { }
-    void send(sender& se)
+    void send(const sender& se)
     { se.isend(arr, size, MPI_INT); }
-    void recv(receiver& re)
+    void recv(const receiver& re)
     {
         if (arr == nullptr)
             arr = new int[size];
@@ -38,10 +38,10 @@ public:
         arr = new int*[size];
         arr[0] = nullptr;
     }
-    void send(sender& se)
+    void send(const sender& se)
     { se.isend(arr[0], size * length, MPI_INT); }
 
-    void recv(receiver& re)
+    void recv(const receiver& re)
     {
         if (arr[0] == nullptr)
         {
@@ -60,9 +60,9 @@ public:
     int a;
     onemessage(int _a): message(), a(_a)
     { }
-    void send(sender& se)
+    void send(const sender& se)
     { se.isend(&a, 1, MPI_INT); }
-    void recv(receiver& re)
+    void recv(const receiver& re)
     { re.irecv(&a, 1, MPI_INT); }
 };
 

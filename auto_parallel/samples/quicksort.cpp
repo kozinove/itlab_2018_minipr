@@ -20,10 +20,10 @@ public:
     {
         size_t size;
         
-        void send(sender& se)
+        void send(const sender& se)
         { se.send(&size, 1, MPI_LONG_LONG); }
 
-        void recv(receiver& re)
+        void recv(const receiver& re)
         { re.recv(&size, 1, MPI_LONG_LONG); }
     };
 
@@ -32,13 +32,13 @@ public:
         int offset;
         size_t size;
 
-        void send(sender& se)
+        void send(const sender& se)
         {
             se.send(&offset, 1, MPI_INT);
             se.send(&size, 1, MPI_LONG_LONG);
         }
 
-        void recv(receiver& re)
+        void recv(const receiver& re)
         {
             re.recv(&offset, 1, MPI_INT);
             re.recv(&size, 1, MPI_LONG_LONG);
@@ -51,15 +51,15 @@ public:
     arrray(message* m, part_info* pi): size(pi->size)
     { p = ((arrray*)m)->p + pi->offset; }
 
-    void send(sender& se)
+    void send(const sender& se)
     { se.isend(p, size, MPI_INT); }
 
-    void recv(receiver& re)
+    void recv(const receiver& re)
     { re.irecv(p, size, MPI_INT); }
 };
 
 int main(int argc, char** argv)
 {
     message_factory::add<arrray>();
-    cout << message_giver<arrray>::get_id() << endl;
+    cout << message_creator<arrray>::get_id() << endl;
 }
