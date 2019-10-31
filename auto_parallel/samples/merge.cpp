@@ -57,7 +57,7 @@ public:
     { }
     merge_t(vector<message*> vm, vector<const message*> cvm): task(vm, cvm)
     { }
-    void perform()
+    void perform(task_environment& env)
     {
         const m_array* s1, *s2;
         m_array* out;
@@ -96,7 +96,7 @@ public:
     { }
     merge_t_all(vector<message*> vm): task(vm)
     { }
-    void perform()
+    void perform(task_environment& env)
     {
         m_array* s1, *s2;
         s1 = (m_array*)data[0];
@@ -155,7 +155,7 @@ int main(int argc, char** argv)
 
     task_factory::add<merge_t>();
     task_factory::add<merge_t_all>();
-    task* tttu = task_factory::get(0);
+    //task* tttu = task_factory::get(0);
 
     vector<task*> v1, v2;
     int g = 1 << layers;

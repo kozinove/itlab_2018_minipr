@@ -72,7 +72,7 @@ class mytask: public task
 public:
     mytask(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v): task(mes_v, cmes_v)
     { }
-    void perform()
+    void perform(task_environment& env)
     {
         const matrix_part& mp = (const matrix_part&)get_c(0);
         const mymessage& vb = (const mymessage&)get_c(1);
@@ -91,7 +91,7 @@ class out_task: public task
 public:
     out_task(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v): task(mes_v, cmes_v)
     { }
-    void perform()
+    void perform(task_environment& env)
     {
         int* a = ((mymessage*)data[0])->arr;
         int size = ((mymessage*)data[0])->size;
@@ -110,7 +110,7 @@ class init_task : public task
     public:
     init_task(std::vector<message*>& mes_v, std::vector<const message*>& cmes_v): task(mes_v, cmes_v)
     { }
-    void perform()
+    void perform(task_environment& env)
     {
         int**& a = ((matrix_part*)data[0])->arr;
         a[0] = new int[size_t(n) * m];

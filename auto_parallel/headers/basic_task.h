@@ -17,7 +17,7 @@ namespace auto_parallel
         task_creator_base();
         virtual ~task_creator_base();
 
-        virtual task* get_task() = 0;
+        virtual task* get_task(std::vector<message*>& data, std::vector<const message*>& c_data) = 0;
 
     };
 
@@ -33,7 +33,7 @@ namespace auto_parallel
         task_creator();
         ~task_creator();
 
-        task* get_task();
+        task* get_task(std::vector<message*>& data, std::vector<const message*>& c_data);
         static int get_id();
 
         friend class task_factory;
@@ -51,8 +51,8 @@ namespace auto_parallel
     { }
 
     template<typename Type>
-    task* task_creator<Type>::get_task()
-    { return new Type(); }
+    task* task_creator<Type>::get_task(std::vector<message*>& data, std::vector<const message*>& c_data)
+    { return new Type(data, c_data); }
 
     template<typename Type>
     int task_creator<Type>::get_id()
@@ -75,7 +75,9 @@ namespace auto_parallel
         };
 
         struct task_info
-        { std::vector<mes_id> data, c_data; };
+        {
+            std::vector<mes_id> data, c_data;
+        };
 
         struct task_data
         {
@@ -106,6 +108,7 @@ namespace auto_parallel
     public:
         
         task_environment(task_data& td);
+        task_environment(task_data&& td);
 
         template<class Type>
         int create_task(task_info* ti);
@@ -157,7 +160,7 @@ namespace auto_parallel
         task(std::vector<message*>& mes_v = std::vector<message*>::vector(), std::vector<const message*>& c_mes_v = std::vector<const message*>::vector());
         virtual ~task();
 
-        virtual void perform() = 0;
+        virtual void perform(task_environment& env) = 0;
 
         void put_a(message* mes);
         void put_c(const message* mes);
@@ -184,7 +187,7 @@ namespace auto_parallel
         //template<typename Type, typename ...Types>
         //static void add();
 
-        static task* get(size_t id);
+        static task* get(size_t id, std::vector<message*>& data, std::vector<const message*>& c_data);
         
     };
 

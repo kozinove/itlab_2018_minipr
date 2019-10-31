@@ -3,6 +3,135 @@
 namespace auto_parallel
 {
 
+    parallelizer::instruction::instruction(): sendable()
+    {
+        previous = cmd::UNDEFINED;
+        prev_pos = -1;
+    }
+
+    parallelizer::instruction::~instruction()
+    { }
+
+    void parallelizer::instruction::send(const sender& se)
+    { se.send(v.data(), v.size(), MPI_INT); }
+
+    void parallelizer::instruction::recv(const receiver& re)
+    {
+        v.resize(re.probe(MPI_INT));
+        re.recv(v.data(), v.size(), MPI_INT);
+    }
+
+    int& parallelizer::instruction::operator[](size_t n)
+    { return v[n]; }
+
+    const int& parallelizer::instruction::operator[](size_t n) const
+    { return v[n]; }
+
+    size_t parallelizer::instruction::size()
+    { return v.size(); }
+
+    void parallelizer::instruction::clear()
+    { v.clear(); }
+
+    void parallelizer::instruction::add_cmd(cmd id)
+    {
+        if (id == previous)
+            ++v[prev_pos + 1];
+        else
+        {
+            previous = id;
+            prev_pos = v.size();
+            v.push_back(static_cast<int>(id));
+            v.push_back(1);
+        }
+    }
+
+    void parallelizer::instruction::add_end()
+    { add_cmd(cmd::END); }
+
+    void parallelizer::instruction::add_message_sending(int id)
+    {
+        add_cmd(cmd::MES_SEND);
+        v.push_back(id);
+    }
+
+    void parallelizer::instruction::add_message_receiving(int id)
+    {
+        add_cmd(cmd::MES_RECV);
+        v.push_back(id);
+    }
+
+    void parallelizer::instruction::add_message_creation(int id, int type)
+    {
+        add_cmd(cmd::MES_CREATE);
+        v.push_back(id);
+        v.push_back(type);
+    }
+
+    void parallelizer::instruction::add_message_part_creation(int id, int type, int source)
+    {
+        add_cmd(cmd::MES_P_CREATE);
+        v.push_back(id);
+        v.push_back(type);
+        v.push_back(source);
+    }
+
+    void parallelizer::instruction::add_task_execution(int id)
+    {
+        add_cmd(cmd::TASK_EXE);
+        v.push_back(id);
+    }
+
+    void parallelizer::instruction::add_task_creation(int id, int type, std::vector<int> data, std::vector<int> c_data)
+    {
+        add_cmd(cmd::TASK_CREATE);
+        v.push_back(id);
+        v.push_back(type);
+        v.push_back(data.size());
+        for (int i: data)
+            v.push_back(i);
+        v.push_back(c_data.size());
+        for (int i: c_data)
+            v.push_back(i);
+    }
+
+    void parallelizer::instruction::add_task_result(int id, task_environment& env)
+    {
+        add_cmd(cmd::TASK_RES);
+        std::vector<task_environment::message_data>& md = env.get_c_messages();
+        std::vector<task_environment::message_part_data>& mpd = env.get_c_parts();
+        std::vector<task_environment::task_data>& td = env.get_c_tasks();
+
+        v.push_back(id);
+        v.push_back(md.size());
+        for (int i = 0; i < md.size(); ++i)
+            v.push_back(md[i].type);
+        v.push_back(mpd.size());
+        for (int i = 0; i < mpd.size(); ++i)
+        {
+            v.push_back(mpd[i].type);
+            v.push_back(mpd[i].sourse.id);
+            v.push_back(static_cast<int>(mpd[i].sourse.ms));
+        }
+        v.push_back(td.size());
+        for (int i = 0; i < td.size(); ++i)
+        {
+            v.push_back(td[i].type);
+            v.push_back(td[i].ti->data.size());
+            for (task_environment::mes_id j: td[i].ti->data)
+            {
+                v.push_back(j.id);
+                v.push_back(static_cast<int>(j.ms));
+            }
+            v.push_back(td[i].ti->c_data.size());
+            for (task_environment::mes_id j: td[i].ti->c_data)
+            {
+                v.push_back(j.id);
+                v.push_back(static_cast<int>(j.ms));
+            }
+        }
+    }
+
     const int parallelizer::main_proc = 0;
 
     parallelizer::parallelizer(int* argc, char*** argv): parallel_engine(argc, argv), comm(MPI_COMM_WORLD), instr_comm(comm)
@@ -189,30 +318,172 @@ namespace auto_parallel
             }
         }
 
-        for (int i = 0; i < comm.get_size(); ++i)
-            if (i != main_proc)
-                send_instruction(-1, i, 0);
+        instruction end;
+        end.add_end();
+        for (int i = 1; i < instr_comm.get_size(); ++i)
+            instr_comm.send(&end, i);
     }
 
     void parallelizer::worker()
     {
         instruction cur_inst;
-        bool exe = true;
-        while(exe)
+        while(1)
         {
-            cur_inst = recv_instruction(main_proc);
-            switch (cur_inst.n[0])
+            instr_comm.recv(&cur_inst, main_proc);
+            int j = 0;
+
+            while (j < cur_inst.size())
             {
-            case 0:
-                execute_task(cur_inst.n[1]);
-                break;
-            case 1:
-                recv_task_data(cur_inst.n[1], main_proc);
-                break;
-            default:
-                exe = false;
+                int cur_i_pos = j;
+                j += 2;
+                switch (static_cast<instruction::cmd>(cur_inst[cur_i_pos]))
+                {
+                case instruction::cmd::MES_SEND:
+
+                    for (int i = 0; i < cur_inst[cur_i_pos + 1]; ++i)
+                        comm.send(data_v[cur_inst[j++]].d, main_proc);
+                    break;
+
+                case instruction::cmd::MES_RECV:
+
+                    for (int i = 0; i < cur_inst[cur_i_pos + 1]; ++i)
+                        comm.recv(data_v[cur_inst[j++]].d, main_proc);
+                    break;
+
+                case instruction::cmd::MES_CREATE:
+
+                    for (int i = 0; i < cur_inst[cur_i_pos + 1]; ++i)
+                    {
+                        create_message(cur_inst[j], cur_inst[j + 1], main_proc);
+                        j += 2;
+                    }
+                    break;
+
+                case instruction::cmd::MES_P_CREATE:
+
+                    for (int i = 0; i < cur_inst[cur_i_pos + 1]; ++i)
+                    {
+                        create_part(cur_inst[j], cur_inst[j + 1], cur_inst[j + 2], main_proc);
+                        j += 3;
+                    }
+                    break;
+
+                case instruction::cmd::TASK_CREATE:
+
+                    for (int i = 0; i < cur_inst[cur_i_pos + 1]; ++i)
+                        j += create_task(&cur_inst[j]);
+                    break;
+
+                case instruction::cmd::TASK_EXE:
+
+                    for (int i = 0; i < cur_inst[cur_i_pos + 1]; ++i)
+                        execute_task(cur_inst[j++]);
+                    break;
+
+                case instruction::cmd::END:
+
+                    goto end;
+
+                default:
+
+                    MPI_Abort(instr_comm.get_comm(), 234);
+                }
             }
         }
+        end:;
+    }
+
+    void parallelizer::create_message(int id, int type, int proc)
+    {
+        message::init_info_base* iib = message_factory::get_info(type);
+        instr_comm.recv(iib, proc);
+        if (data_v.size() <= id)
+            data_v.resize(id + 1);
+        data_v[id] = {message_factory::get(type, iib), -1, 0};
+    }
+
+    void parallelizer::create_part(int id, int type, int source, int proc)
+    {
+        message::part_info_base* pib = message_factory::get_part_info(type);
+        instr_comm.recv(pib, proc);
+        message* src = data_v[source].d;
+        if (data_v.size() <= id)
+            data_v.resize(id + 1);
+        data_v[id] = {message_factory::get_part(type, src, pib), source, data_v[source].version};
+    }
+
+    int parallelizer::create_task(int* inst)
+    {
+        int ret = 4;
+        int sz = inst[2];
+        ret += sz;
+        int* p = inst + 3;
+
+        std::vector<message*> data;
+        data.reserve(sz);
+        std::vector<const message*> c_data;
+        c_data.reserve(sz);
+        std::vector<int> data_id;
+        data_id.reserve(sz);
+        std::vector<int> const_data_id;
+        const_data_id.reserve(sz);
+
+        for (int i = 0; i < sz; ++i)
+        {
+            data.push_back(data_v[p[i]].d);
+            data_id.push_back(p[i]);
+        }
+
+        p += sz + 1;
+        sz = *(p - 1);
+        ret += sz;
+
+        for (int i = 0; i < sz; ++i)
+        {
+            c_data.push_back(data_v[p[i]].d);
+            const_data_id.push_back(p[i]);
+        }
+
+        task_v[inst[0]] = {task_factory::get(inst[1], data, c_data), 0, std::vector<int>(), data_id, const_data_id};
+        return ret;
+    }
+
+    void parallelizer::execute_task(int task_id)
+    {
+        std::vector<int>& d = task_v[task_id].data_id;
+        std::vector<int>& cd = task_v[task_id].const_data_id;
+
+        for (int i = 0; i < d.size(); ++i)
+            data_v[d[i]].d->wait_requests();
+
+        for (int i = 0; i < cd.size(); ++i)
+            data_v[cd[i]].d->wait_requests();
+
+        task_environment::task_info ti;
+        for (int i: d)
+            ti.data.push_back({i, task_environment::message_source::TASK_ARG});
+        for (int i: cd)
+            ti.c_data.push_back({i, task_environment::message_source::TASK_ARG_C});
+
+        task_environment::task_data td = {-1, &ti};
+
+        task_environment env(std::move(td));
+        task_v[task_id].t->perform(env);
+
+        instruction res;
+        res.add_task_result(task_id, env);
+
+        instr_comm.send(&res, main_proc);
+        for (int i = 0; i < env.get_c_messages.size(); ++i)
+            instr_comm.send(env.get_c_messages[i].iib, main_proc);
+        for (int i = 0; i < env.get_c_parts.size(); ++i)
+            instr_comm.send(env.get_c_parts.pib, main_proc);
+
+        for (size_t i = 0; i < d.size(); ++i)
+            comm.send(data_v[d[i]].d, main_proc);
+
+        for (int i = 0; i < d.size(); ++i)
+            data_v[d[i]].d->wait_requests();
     }
 
     void parallelizer::send_task_data(int tid, int proc, std::vector<std::set<int>>& ver)
@@ -290,42 +561,6 @@ namespace auto_parallel
             comm.recv(data_v[recv_d[i]].d, proc);
 
         delete[] recv_d;
-    }
-
-    void parallelizer::execute_task(int task_id)
-    {
-        std::vector<int>& d = task_v[task_id].data_id;
-        std::vector<int>& cd = task_v[task_id].const_data_id;
-
-        for (int i = 0; i < d.size(); ++i)
-            data_v[d[i]].d->wait_requests();
-
-        for (int i = 0; i < cd.size(); ++i)
-            data_v[cd[i]].d->wait_requests();
-
-        task_v[task_id].t->perform();
-
-        for (size_t i = 0; i < d.size(); ++i)
-            comm.send(data_v[d[i]].d, main_proc);
-
-        for (int i = 0; i < d.size(); ++i)
-            data_v[d[i]].d->wait_requests();
-    }
-
-    void parallelizer::send_instruction(int type, int proc, int info)
-    {
-        instruction i;
-        i.n[0] = type;
-        i.n[1] = info;
-        MPI_Send(i.n, 2, MPI_INT, proc, 1, instr_comm.get_comm());
-    }
-
-    parallelizer::instruction parallelizer::recv_instruction(int proc)
-    {
-        MPI_Status status;
-        instruction i;
-        MPI_Recv(i.n, 2, MPI_INT, proc, 1, instr_comm.get_comm(), &status);
-        return i;
     }
 
     void parallelizer::next_proc(int& proc)

@@ -12,6 +12,9 @@ namespace auto_parallel
     task_environment::task_environment(task_environment::task_data& td)
     { this_task = td; }
 
+    task_environment::task_environment(task_data&& td): this_task(std::move(td))
+    { }
+
     std::vector<task_environment::task_data>& task_environment::get_c_tasks()
     { return created_tasks; }
 
@@ -50,7 +53,7 @@ namespace auto_parallel
 
     std::vector<task_creator_base*> task_factory::v;
 
-    task* task_factory::get(size_t id)
-    { return v.at(id)->get_task(); }
+    task* task_factory::get(size_t id, std::vector<message*>& data, std::vector<const message*>& c_data)
+    { return v.at(id)->get_task(data, c_data); }
 
 }
