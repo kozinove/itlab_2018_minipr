@@ -1,81 +1,105 @@
 #include <iostream>
 #include <vector>
 #include <mpi.h>
+#include "parallel_vector.h"
 
-using namespace std;
+parallel_vector::parallel_vector() {
+    MPI_Comm_size(MPI_COMM_WORLD, &sizeproc);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rankproc);
+    portion = 1;
+    allsize = sizeproc;
+    v.resize(portion);
+}
 
-class parallel_vector {
-    vector<int>v;
-    int sizeproc, rankproc;
-    int portion;
-    int allsize;
-public:
-    parallel_vector(int size) {
-        MPI_Comm_size(MPI_COMM_WORLD, &sizeproc);
-        MPI_Comm_rank(MPI_COMM_WORLD, &rankproc);
-        portion = size/sizeproc;
-        if(rankproc < size%sizeproc)
-            portion++;
-        allsize = size;
-        v.resize(portion);
+parallel_vector::parallel_vector(const int& size) {
+    MPI_Comm_size(MPI_COMM_WORLD, &sizeproc);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rankproc);
+    portion = size/sizeproc;
+    if(rankproc < size%sizeproc)
+        portion++;
+    allsize = size;
+    v.resize(portion);
+}
+
+parallel_vector::parallel_vector(const parallel_vector& pv) {
+    portion = pv.portion;
+    rankproc = pv.rankproc;
+    sizeproc = pv.sizeproc;
+    allsize = pv.allsize;
+    v.resize(pv.v.size());
+    for(int i = 0; i < portion; i++) {
+        v[i] = pv.v[i];
     }
-    int get_elem(int index) {
-        if(index < 0 || index >= allsize)
-            throw -1;
-        int numberproc = get_number_of_proccess(index), numberelem = get_number_of_element(index);
-        int ans;
-        if(rankproc == numberproc)
-            ans = v[numberelem];
-        MPI_Bcast(&ans, 1, MPI_INT, numberproc, MPI_COMM_WORLD);
-        return ans;
-    }
+}
 
-    void set_elem(int index, int value) {
-        if(index < 0 || index >= allsize)
-            throw -1;
-        int number_proc = get_number_of_proccess(index), number_elem = get_number_of_element(index);
-        if(rankproc == number_proc) {
-            v[number_elem] = value;
+parallel_vector& parallel_vector::operator=(const parallel_vector& pv) {
+    if(this != &pv) {
+        portion = pv.portion;
+        rankproc = pv.rankproc;
+        sizeproc = pv.sizeproc;
+        allsize = pv.allsize;
+        v.resize(pv.v.size());
+        for(int i = 0; i < portion; i++) {
+            v[i] = pv.v[i];
         }
     }
+    return *this;
+}
 
-private:
-    int get_number_of_proccess(int index) {
-        int number_proc;
-        if(index < (allsize%sizeproc)*(allsize/sizeproc+1)) {
-            number_proc = index/(allsize/sizeproc+1);
-        } else {
-            int tmp = index - (allsize%sizeproc)*(allsize/sizeproc+1);
-            number_proc = tmp/(allsize/sizeproc) + (allsize%sizeproc);
-        }
-        return number_proc;
-    }
-    int get_number_of_element(int index) {
-        int number_elem;
-        if(index < (allsize%sizeproc)*(allsize/sizeproc+1)) {
-            number_elem = index%(allsize/sizeproc+1);
-        } else {
-            int tmp = index - (allsize%sizeproc)*(allsize/sizeproc+1);
-            number_elem = tmp%(allsize/sizeproc);
-        }
-        return number_elem;
-    }
-};
+int parallel_vector::get_elem(const int& index) {
+    if(index < 0 || index >= allsize)
+        throw -1;
+    int number_of_proccess = get_index_of_proccess(index), numberelem = get_index_of_element(index);
+    int ans;
+    if(rankproc == number_of_proccess)
+        ans = v[numberelem];
+    MPI_Bcast(&ans, 1, MPI_INT, number_of_proccess, MPI_COMM_WORLD);
+    return ans;
+}
 
-int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
-    int n = 100;
-    parallel_vector pv(n);
-    int rank, size;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    for(int i = 0; i < n; i++) {
-        pv.set_elem(i, i*i);
+void parallel_vector::set_elem(const int& index, const int& value) {
+    if(index < 0 || index >= allsize)
+        throw -1;
+    int number_proc = get_index_of_proccess(index), number_elem = get_index_of_element(index);
+    if(rankproc == number_proc) {
+        v[number_elem] = value;
     }
-    for(int i = 0; i < n; i++) {
-        int tmp = pv.get_elem(i);
-        if(rank == 0)
-            cout<<tmp<<"\n";
+}
+
+int parallel_vector::get_elem_proc(const int& index) const { // WARNING!
+    if(index < 0 || index >= portion)
+         throw -1;
+    return v[index];
+}
+
+void parallel_vector::set_elem_proc(const int& index, const int& value) { // WARNING!
+    if(index < 0 || index >= portion)
+         throw -1;
+    v[index] = value;
+}
+
+int parallel_vector::get_portion() const {
+    return portion;
+}
+
+int parallel_vector::get_index_of_proccess(const int& index) const {
+    int number_proc;
+    if(index < (allsize%sizeproc)*(allsize/sizeproc+1)) {
+        number_proc = index/(allsize/sizeproc+1);
+    } else {
+        int tmp = index - (allsize%sizeproc)*(allsize/sizeproc+1);
+        number_proc = tmp/(allsize/sizeproc) + (allsize%sizeproc);
     }
-    return 0;
+    return number_proc;
+}
+
+int parallel_vector::get_index_of_element(const int& index) const {
+    int number_elem;
+    if(index < (allsize%sizeproc)*(allsize/sizeproc+1)) {
+        number_elem = index%(allsize/sizeproc+1);
+    } else {
+        int tmp = index - (allsize%sizeproc)*(allsize/sizeproc+1);
+        number_elem = tmp%(allsize/sizeproc);
+    }
+    return number_elem;
 }
