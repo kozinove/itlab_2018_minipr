@@ -5,6 +5,7 @@
 #include <queue>
 #include <map>
 #include <set>
+#include <iostream>
 #include "mpi.h"
 #include "parallel_core.h"
 #include "task_graph.h"
@@ -65,6 +66,9 @@ namespace auto_parallel
         struct d_info
         {
             message* d;
+            int type;
+            message::init_info_base* iib;
+            message::part_info_base* pib;
             int parent;
             int version;
         };
@@ -72,7 +76,10 @@ namespace auto_parallel
         struct t_info
         {
             task* t;
+            int type;
+            int parent;
             int parents;
+            int c_childs;
             std::vector<int> childs;
             std::vector<int> data_id;
             std::vector<int> const_data_id;
@@ -81,7 +88,7 @@ namespace auto_parallel
         intracomm comm;
         intracomm instr_comm;
 
-        it_queue<std::pair<int, int>> ready_tasks;
+        it_queue<int> ready_tasks;
         std::vector<t_info> task_v;
         std::vector<d_info> data_v;
 
@@ -89,21 +96,17 @@ namespace auto_parallel
 
         void master();
         void worker();
-        void sequential_execution();
 
-        void wait_proc(int task_id, int proc, std::vector<std::set<int>>& v);
-
-        void send_task_data(int tid, int proc, std::vector<std::set<int>>& ver);
-        void recv_task_data(int tid, int proc);
-
-        void next_proc(int& proc);
+        void send_task_data(int tid, int proc, instruction& ins, std::vector<std::set<int>>& ver, std::vector<std::set<int>>& con);
+        void assign_task(int tid, int proc, instruction& ins, std::vector<std::set<int>>& com);
+        void send_instruction(int proc, instruction& ins);
+        void end_main_task(int tid, task_environment& te, std::vector<std::set<int>>& ver, std::vector<std::set<int>>& con, std::vector<std::set<int>>& con_t);
+        void wait_task(int proc, std::vector<std::set<int>>& ver, std::vector<std::set<int>>& con, std::vector<std::set<int>>& con_t);
 
         void create_message(int id, int type, int proc);
         void create_part(int id, int type, int source, int proc);
         int create_task(int* inst);
         void execute_task(int id);
-
-        
 
     public:
 

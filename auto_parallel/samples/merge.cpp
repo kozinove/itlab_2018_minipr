@@ -151,12 +151,14 @@ int main(int argc, char** argv)
     parallelizer pz;
     task_graph tg;
 
-    task_creator<merge_t> wqww;
+    //task_creator<merge_t> wqww;
 
-    task_factory::add<merge_t>();
-    task_factory::add<merge_t_all>();
+    //task_factory::add<merge_t>();
+    //task_factory::add<merge_t_all>();
     //task* tttu = task_factory::get(0);
 
+
+    vector<message*> fin;
     vector<task*> v1, v2;
     int g = 1 << layers;
     if (layers != 0)
@@ -169,7 +171,7 @@ int main(int argc, char** argv)
         cw[1] = new m_array(size - size / 2, p2 + size / 2);
         w[0] = new m_array(size, p1);
         v2.push_back(new merge_t(w, cw));
-
+        fin.push_back(w[0]);
         for (int i = 1; i < layers; ++i)
         {
             int q = 1 << i;
@@ -220,13 +222,18 @@ int main(int argc, char** argv)
         w[1] = new m_array(size, p2);
         tg.add_task(new merge_t_all(w));
         swap(p1, p2);
+        fin.push_back(w[0]);
+        fin.push_back(w[1]);
     }
 
     pz.init(tg);
+
     pz.execution();
 
     if (pz.get_current_proc() == parallelizer::main_proc)
     {
+        for (message* i: fin)
+            i->wait_requests();
         double dt = MPI_Wtime();
         sort(p3, p3 + size);
         double pt = MPI_Wtime();
@@ -234,6 +241,9 @@ int main(int argc, char** argv)
         for (int i = 0; i < size; ++i)
             if (p1[i] != p3[i])
                 fl = true;
+        /*for (int i = 0; i < size; ++i)
+            cout << p1[i] << ' ';
+        cout << '\n';*/
         if (fl)
             cout << "wrong\n";
         else

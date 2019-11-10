@@ -95,6 +95,7 @@ namespace auto_parallel
         {
             int type;
             mes_id sourse;
+            message::init_info_base* iib;
             message::part_info_base* pib;
         };
 
@@ -115,7 +116,7 @@ namespace auto_parallel
         template<class Type>
         int create_message(message::init_info_base* iib);
         template<class Type>
-        int create_message(message::part_info_base* pib, mes_id sourse);
+        int create_message(message::init_info_base* iib, message::part_info_base* pib, mes_id sourse);
 
         std::vector<task_data>& get_c_tasks();
         std::vector<message_data>& get_c_messages();
@@ -130,21 +131,21 @@ namespace auto_parallel
     template<class Type>
     int task_environment::create_task(task_environment::task_info* ti)
     { 
-        created_tasks.push_back({task_creator<Type>::my_id, ti});
+        created_tasks.push_back({task_creator<Type>::get_id(), ti});
         return created_tasks.size() - 1;
     }
 
     template<class Type>
     int task_environment::create_message(message::init_info_base* iib)
     {
-        created_messages.push_back({message_creator<Type>::my_id, iib});
+        created_messages.push_back({message_creator<Type>::get_id(), iib});
         return created_messages.size() - 1;
     }
 
     template<class Type>
-    int task_environment::create_message(message::part_info_base* pib, task_environment::mes_id sourse)
+    int task_environment::create_message(message::init_info_base* iib, message::part_info_base* pib, task_environment::mes_id sourse)
     {
-        created_parts.push_back({message_creator<Type>::my_part_id, sourse, pib});
+        created_parts.push_back({message_creator<Type>::get_part_id(), sourse, iib, pib});
         return created_parts.size() - 1;
     }
 
@@ -183,9 +184,6 @@ namespace auto_parallel
 
         template<typename Type>
         static void add();
-
-        //template<typename Type, typename ...Types>
-        //static void add();
 
         static task* get(size_t id, std::vector<message*>& data, std::vector<const message*>& c_data);
         

@@ -25,10 +25,10 @@ namespace auto_parallel
     { return created_parts; }
 
     task_environment::mes_id task_environment::get_arg_id(int n)
-    { return {n, message_source::TASK_ARG}; }
+    { return this_task.ti->data[n]; }
 
     task_environment::mes_id task_environment::get_c_arg_id(int n)
-    { return {n, message_source:: TASK_ARG_C}; }
+    { return this_task.ti->c_data[n]; }
 
     task_environment::task_data task_environment::get_this_task_data()
     { return this_task; }

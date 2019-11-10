@@ -109,11 +109,11 @@ namespace auto_parallel
 
     template<typename Type>
     message::init_info_base* message_creator<Type>::get_init_info()
-    { return new Type::init_info(); }
+    { return new Type::init_info; }
 
     template<typename Type>
     message::part_info_base* message_creator<Type>::get_part_info()
-    { return new Type::part_info(); }
+    { return new Type::part_info; }
 
     template<typename Type>
     int message_creator<Type>::get_id()
@@ -159,7 +159,7 @@ namespace auto_parallel
     {
         if (message_creator<Type>::my_part_id >= 0)
             return;
-        message_creator<Type>::my_part_id = v.size();
+        message_creator<Type>::my_part_id = v_part.size();
         v_part.push_back(new message_creator<Type>());
     }
 
