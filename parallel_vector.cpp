@@ -46,7 +46,7 @@ parallel_vector& parallel_vector::operator=(const parallel_vector& pv) {
     return *this;
 }
 
-int parallel_vector::get_elem(const int& index) {
+int parallel_vector::get_elem(const int& index) const {
     if(index < 0 || index >= allsize)
         throw -1;
     int number_of_proccess = get_index_of_proccess(index), numberelem = get_index_of_element(index);
