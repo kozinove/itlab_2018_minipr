@@ -25,8 +25,24 @@ namespace auto_parallel
         void isend(void* buf, int size, MPI_Datatype type) const;
         void big_send(void* buf, size_t size, MPI_Datatype type) const;
         void big_isend(void* buf, size_t size, MPI_Datatype type) const;
+        template<class T>
+        void send(T* buf, int size = 1);
+        template<class T>
+        void isend(T* buf, int size = 1);
 
     };
+
+    template<class T>
+    void sender::send(T* buf, int size)
+    { MPI_Send(buf, size * sizeof(T), MPI_BYTE, proc, tag++, comm); }
+
+    template<class T>
+    void sender::isend(T* buf, int size)
+    {
+        MPI_Request req;
+        MPI_Isend(buf, size * sizeof(T), MPI_BYTE, proc, tag++, comm, &req);
+        q->push(req);
+    }
 
     class receiver
     {
@@ -46,8 +62,25 @@ namespace auto_parallel
         int probe(MPI_Datatype type) const;
         void big_recv(void* buf, size_t size, MPI_Datatype type) const;
         void big_irecv(void* buf, size_t size, MPI_Datatype type) const;
+        template<class T>
+        void recv(T* buf, int size = 1);
+        template<class T>
+        void irecv(T* buf, int size = 1);
 
     };
+
+    template<class T>
+    void receiver::recv(T* buf, int size)
+    { MPI_Recv(buf, size * sizeof(T), MPI_BYTE, proc, tag++, comm, MPI_STATUS_IGNORE); }
+
+    template<class T>
+    void receiver::irecv(T* buf, int size)
+    {
+        MPI_Request req;
+        MPI_Irecv(buf, size * sizeof(T), MPI_BYTE, proc, tag++, comm, &req);
+        q->push(req);
+    }
+
 
 }
 

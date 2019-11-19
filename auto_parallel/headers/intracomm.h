@@ -23,6 +23,9 @@ namespace auto_parallel
         void recv(sendable* mes, int proc);
         void bcast(sendable* mes, int proc);
 
+        void barrier();
+        void abort(int err);
+
     };
 
 }

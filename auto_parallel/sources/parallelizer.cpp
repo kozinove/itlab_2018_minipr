@@ -441,7 +441,7 @@ namespace auto_parallel
                 break;
 
             default:
-                MPI_Abort(comm.get_comm(), 555);
+                comm.abort(555);
             }
         }
     }
@@ -562,6 +562,9 @@ namespace auto_parallel
             ver[proc].insert(d[i]);
             data_v[d[i]].version++;
         }
+
+        for (int i = 0; i < d.size(); ++i)
+            data_v[d[i]].d->wait_requests();
 
         int sz = res_ins[j++];
         for (int i = 0; i < sz; ++i)
@@ -718,7 +721,7 @@ namespace auto_parallel
 
                 default:
 
-                    MPI_Abort(instr_comm.get_comm(), 234);
+                    instr_comm.abort(234);
                 }
             }
             cur_inst.clear();

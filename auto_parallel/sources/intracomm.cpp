@@ -45,4 +45,10 @@ namespace auto_parallel
         }
     }
 
+    void intracomm::barrier()
+    { MPI_Barrier(comm); }
+
+    void intracomm::abort(int err)
+    { MPI_Abort(comm, err); }
+
 }

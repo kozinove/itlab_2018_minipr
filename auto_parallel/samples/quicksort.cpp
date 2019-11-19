@@ -96,57 +96,60 @@ public:
         int* a = a1.p;
         int sz = a1.size;
 
-        int bel;
-        int mi = min(min(a[0], a[sz - 1]), a[sz / 2]);
-        int ma = min(min(a[0], a[sz - 1]), a[sz / 2]);
-        if ((a[0] > mi) && (a[0] < ma))
-            bel = a[0];
-        else if ((a[sz - 1] > mi) && (a[sz - 1] < ma))
-            bel = a[sz - 1];
-        else
-            bel = a[sz / 2];
-
-        int l = 0, r = sz - 1;
-        while (l <= r)
-        {
-            while (a[l] < bel)
-                ++l;
-            while (a[r] > bel)
-                --r;
-            if (l <= r)
-                swap(a[l++], a[r--]);
-        }
-        
         if (sz < pred)
-        {
-            sort(a, a + r + 1);
-            sort(a + r + 1, a + sz);
-        }
+            sort(a, a + sz);
         else
         {
-            arrray::init_info* ii1 = new arrray::init_info;
-            ii1->size = r + 1;
-            arrray::part_info* pi1 = new arrray::part_info;
-            pi1->offset = 0;
-            pi1->size = r + 1;
-            task_environment::mes_id mi1;
-            mi1.ms = task_environment::message_source::PART;
-            mi1.id = env.create_message<arrray>(ii1, pi1, env.get_arg_id(0));
-            task_environment::task_info* ti1 = new task_environment::task_info;
-            ti1->data.push_back(mi1);
-            env.create_task<quick_task>(ti1);
+            int bel;
+            int mi = min(min(a[0], a[sz - 1]), a[sz / 2]);
+            int ma = min(min(a[0], a[sz - 1]), a[sz / 2]);
+            if ((a[0] > mi) && (a[0] < ma))
+                bel = a[0];
+            else if ((a[sz - 1] > mi) && (a[sz - 1] < ma))
+                bel = a[sz - 1];
+            else
+                bel = a[sz / 2];
 
-            arrray::init_info* ii2 = new arrray::init_info;
-            ii2->size = sz - (r + 1);
-            arrray::part_info* pi2 = new arrray::part_info;
-            pi2->offset = r + 1;
-            pi2->size = sz - (r + 1);
-            task_environment::mes_id mi2;
-            mi2.ms = task_environment::message_source::PART;
-            mi2.id = env.create_message<arrray>(ii2, pi2, env.get_arg_id(0));
-            task_environment::task_info* ti2 = new task_environment::task_info;
-            ti2->data.push_back(mi2);
-            env.create_task<quick_task>(ti2);
+            int l = 0, r = sz - 1;
+            while (l <= r)
+            {
+                while (a[l] < bel)
+                    ++l;
+                while (a[r] > bel)
+                    --r;
+                if (l <= r)
+                    swap(a[l++], a[r--]);
+            }
+            
+            if (r + 1 > 1)
+            {
+                arrray::init_info* ii1 = new arrray::init_info;
+                ii1->size = r + 1;
+                arrray::part_info* pi1 = new arrray::part_info;
+                pi1->offset = 0;
+                pi1->size = r + 1;
+                task_environment::mes_id mi1;
+                mi1.ms = task_environment::message_source::PART;
+                mi1.id = env.create_message<arrray>(ii1, pi1, env.get_arg_id(0));
+                task_environment::task_info* ti1 = new task_environment::task_info;
+                ti1->data.push_back(mi1);
+                env.create_task<quick_task>(ti1);
+            }
+
+            if (sz - (r + 1) > 1)
+            {
+                arrray::init_info* ii2 = new arrray::init_info;
+                ii2->size = sz - (r + 1);
+                arrray::part_info* pi2 = new arrray::part_info;
+                pi2->offset = r + 1;
+                pi2->size = sz - (r + 1);
+                task_environment::mes_id mi2;
+                mi2.ms = task_environment::message_source::PART;
+                mi2.id = env.create_message<arrray>(ii2, pi2, env.get_arg_id(0));
+                task_environment::task_info* ti2 = new task_environment::task_info;
+                ti2->data.push_back(mi2);
+                env.create_task<quick_task>(ti2);
+            }
         }
     }
 };
@@ -162,13 +165,14 @@ public:
     void perform(task_environment& env)
     {
         mt19937 mt(time(0));
-        uniform_int_distribution<int> uid(INT_MIN, INT_MAX);
+        uniform_int_distribution<int> uid(0, 10000);
         arrray& a1 = dynamic_cast<arrray&>(*data[0]);
         arrray& a2 = dynamic_cast<arrray&>(*data[1]);
         time_cl& t = dynamic_cast<time_cl&>(*data[2]);
         for (int i = 0; i < a1.size; ++i)
             a1.p[i] = a2.p[i] = uid(mt);
         t.time = MPI_Wtime();
+        //cout << quick_task::pred << endl;
     }
 };
 
