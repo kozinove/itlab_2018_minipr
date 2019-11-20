@@ -14,6 +14,9 @@ class time_cl: public message
 public:
     double time;
 
+    time_cl()
+    { time = 0.0; }
+
     void send(const sender& se)
     { se.send(&time, 1, MPI_DOUBLE); }
 
@@ -31,6 +34,9 @@ public:
     struct init_info: public init_info_base
     {
         long long size;
+
+        init_info()
+        { size = 0; }
         
         void send(const sender& se)
         { se.send(&size, 1, MPI_LONG_LONG); }
@@ -43,6 +49,9 @@ public:
     {
         int offset;
         long long size;
+
+        part_info()
+        { offset = size = 0; }
 
         void send(const sender& se)
         {
@@ -84,6 +93,39 @@ public:
 
 class quick_task: public task
 {
+private:
+
+    void simple_quicksort(int* a, int size)
+    {
+        int bel;
+        int mi = min(min(a[0], a[size - 1]), a[size / 2]);
+        int ma = min(min(a[0], a[size - 1]), a[size / 2]);
+
+        if (size < 2)
+            return;
+
+        if ((a[0] > mi) && (a[0] < ma))
+            bel = a[0];
+        else if ((a[size - 1] > mi) && (a[size - 1] < ma))
+            bel = a[size - 1];
+        else
+            bel = a[size / 2];
+
+        int l = 0, r = size - 1;
+        while (l <= r)
+        {
+            while (a[l] < bel)
+                ++l;
+            while (a[r] > bel)
+                --r;
+            if (l <= r)
+                swap(a[l++], a[r--]);
+        }
+
+        simple_quicksort(a, r + 1);
+        simple_quicksort(a + r + 1, size - (r + 1));
+    }
+
 public:
     static int pred;
 
@@ -97,7 +139,8 @@ public:
         int sz = a1.size;
 
         if (sz < pred)
-            sort(a, a + sz);
+            simple_quicksort(a, sz);
+            //sort(a, a + sz);
         else
         {
             int bel;
@@ -120,7 +163,7 @@ public:
                 if (l <= r)
                     swap(a[l++], a[r--]);
             }
-            
+
             if (r + 1 > 1)
             {
                 arrray::init_info* ii1 = new arrray::init_info;
@@ -128,11 +171,8 @@ public:
                 arrray::part_info* pi1 = new arrray::part_info;
                 pi1->offset = 0;
                 pi1->size = r + 1;
-                task_environment::mes_id mi1;
-                mi1.ms = task_environment::message_source::PART;
-                mi1.id = env.create_message<arrray>(ii1, pi1, env.get_arg_id(0));
                 task_environment::task_info* ti1 = new task_environment::task_info;
-                ti1->data.push_back(mi1);
+                ti1->data.push_back(env.create_message<arrray>(ii1, pi1, env.get_arg_id(0)));
                 env.create_task<quick_task>(ti1);
             }
 
@@ -143,11 +183,8 @@ public:
                 arrray::part_info* pi2 = new arrray::part_info;
                 pi2->offset = r + 1;
                 pi2->size = sz - (r + 1);
-                task_environment::mes_id mi2;
-                mi2.ms = task_environment::message_source::PART;
-                mi2.id = env.create_message<arrray>(ii2, pi2, env.get_arg_id(0));
                 task_environment::task_info* ti2 = new task_environment::task_info;
-                ti2->data.push_back(mi2);
+                ti2->data.push_back(env.create_message<arrray>(ii2, pi2, env.get_arg_id(0)));
                 env.create_task<quick_task>(ti2);
             }
         }
@@ -188,7 +225,7 @@ public:
         arrray& a1 = dynamic_cast<arrray&>(*data[0]);
         arrray& a2 = dynamic_cast<arrray&>(*data[1]);
         double tm1 = MPI_Wtime();
-        sort(a2.p, a2.p + a2.size);
+        /*sort(a2.p, a2.p + a2.size);
         double tm2 = MPI_Wtime();
         for (int i = 0; i < a1.size; ++i)
             if (a1.p[i] != a2.p[i])
@@ -197,9 +234,9 @@ public:
                 goto gh;
             }
         cout << "correct\n";
-        gh:
+        gh:*/
         cout << tm1 - t.time << '\n';
-        cout << tm2 - tm1;
+        //cout << tm2 - tm1;
         cout.flush();
     }
 };
@@ -218,6 +255,10 @@ int main(int argc, char** argv)
     task_factory::add<quick_task>();
 
     parallelizer pz(&argc, &argv);
+
+    int comm_size = pz.get_proc_count();
+    quick_task::pred = sz / (3 * comm_size / 2);
+
     task_graph tg;
     arrray::init_info ii;
     ii.size = sz;

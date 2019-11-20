@@ -114,9 +114,9 @@ namespace auto_parallel
         template<class Type>
         int create_task(task_info* ti);
         template<class Type>
-        int create_message(message::init_info_base* iib);
+        mes_id create_message(message::init_info_base* iib);
         template<class Type>
-        int create_message(message::init_info_base* iib, message::part_info_base* pib, mes_id sourse);
+        mes_id create_message(message::init_info_base* iib, message::part_info_base* pib, mes_id sourse);
 
         std::vector<task_data>& get_c_tasks();
         std::vector<message_data>& get_c_messages();
@@ -136,17 +136,17 @@ namespace auto_parallel
     }
 
     template<class Type>
-    int task_environment::create_message(message::init_info_base* iib)
+    task_environment::mes_id task_environment::create_message(message::init_info_base* iib)
     {
         created_messages.push_back({message_creator<Type>::get_id(), iib});
-        return created_messages.size() - 1;
+        return {static_cast<int>(created_messages.size() - 1), message_source::CREATED};
     }
 
     template<class Type>
-    int task_environment::create_message(message::init_info_base* iib, message::part_info_base* pib, task_environment::mes_id sourse)
+    task_environment::mes_id task_environment::create_message(message::init_info_base* iib, message::part_info_base* pib, task_environment::mes_id sourse)
     {
         created_parts.push_back({message_creator<Type>::get_part_id(), sourse, iib, pib});
-        return created_parts.size() - 1;
+        return {static_cast<int>(created_parts.size() - 1), message_source::PART};
     }
 
     class task

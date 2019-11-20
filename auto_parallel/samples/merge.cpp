@@ -15,12 +15,7 @@ private:
     int* p;
     int size;
     bool res;
-    public:
-
-    struct init_info: public init_info_base
-    {
-        
-    };
+public:
 
     m_array(int sz, int* pt = nullptr): size(sz), p(pt)
     {
@@ -135,9 +130,9 @@ int main(int argc, char** argv)
     int size = 1000;
     if (argc > 1)
     {
-        layers = atoi(argv[1]);
+        size = atoi(argv[1]);
         if (argc > 2)
-            size = atoi(argv[2]);
+            layers = atoi(argv[2]);
     }
 
     int* p1 = new int[size];
@@ -151,12 +146,17 @@ int main(int argc, char** argv)
     parallelizer pz;
     task_graph tg;
 
-    //task_creator<merge_t> wqww;
-
-    //task_factory::add<merge_t>();
-    //task_factory::add<merge_t_all>();
-    //task* tttu = task_factory::get(0);
-
+    int comm_size = pz.get_proc_count();
+    {
+        int j = 1;
+        int i = 0;
+        while (j < comm_size)
+        {
+            j <<= 1;
+            ++i;
+        }
+        layers = i;
+    }
 
     vector<message*> fin;
     vector<task*> v1, v2;
@@ -235,20 +235,20 @@ int main(int argc, char** argv)
         for (message* i: fin)
             i->wait_requests();
         double dt = MPI_Wtime();
-        sort(p3, p3 + size);
-        double pt = MPI_Wtime();
-        bool fl = false;
-        for (int i = 0; i < size; ++i)
-            if (p1[i] != p3[i])
-                fl = true;
-        /*for (int i = 0; i < size; ++i)
-            cout << p1[i] << ' ';
-        cout << '\n';*/
-        if (fl)
-            cout << "wrong\n";
-        else
-            cout << "correct\n";
-        cout << dt - pz.get_start_time() << '\n' << pt - dt;
+        //sort(p3, p3 + size);
+        //double pt = MPI_Wtime();
+        //bool fl = false;
+        //for (int i = 0; i < size; ++i)
+        //    if (p1[i] != p3[i])
+        //        fl = true;
+        ///*for (int i = 0; i < size; ++i)
+        //    cout << p1[i] << ' ';
+        //cout << '\n';*/
+        //if (fl)
+        //    cout << "wrong\n";
+        //else
+        //    cout << "correct\n";
+        cout << dt - pz.get_start_time();// << '\n' << pt - dt;
         cout.flush();
     }
 }

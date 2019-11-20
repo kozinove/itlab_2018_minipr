@@ -269,12 +269,6 @@ namespace auto_parallel
                 ready_tasks.pop();
             }
 
-            if (ready_tasks.size())
-            {
-                std::cout << rr << ' ' << ready_tasks.size() << std::endl;
-                MPI_Abort(comm.get_comm(), 666);
-            }
-
             for (int i = 1; i < comm.get_size(); ++i)
                 for (int j: assigned[i])
                 {
@@ -546,8 +540,6 @@ namespace auto_parallel
         instr_comm.recv(&res_ins, proc);
 
         int j = 0;
-        if (static_cast<instruction::cmd>(res_ins[j]) != instruction::cmd::TASK_RES)
-            MPI_Abort(comm.get_comm(), 999);
         j += 2;
         int tid = res_ins[j++];
         int new_mes = data_v.size();
@@ -830,5 +822,8 @@ namespace auto_parallel
 
     int parallelizer::get_current_proc()
     { return comm.get_rank(); }
+
+    int parallelizer::get_proc_count()
+    { return comm.get_size(); }
 
 }

@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <iostream>
+#include <conio.h>
 #include "mpi.h"
 #include "parallel_core.h"
 #include "task_graph.h"
@@ -117,6 +118,7 @@ namespace auto_parallel
         ~parallelizer();
 
         int get_current_proc();
+        int get_proc_count();
 
         void init(task_graph& _tg);
 
