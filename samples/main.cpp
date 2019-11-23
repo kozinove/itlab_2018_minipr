@@ -22,5 +22,6 @@ int main(int argc, char** argv) {
     double t2 = MPI_Wtime();
     if(rank == 0)
         cout<<t2-t1;
+    MPI_Finalize();
     return 0;
 }
