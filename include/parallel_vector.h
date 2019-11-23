@@ -21,6 +21,7 @@ public:
     void set_elem_proc(const int& index, const int& value); //don't touch this in main! 
     int get_index_of_proccess(const int& index) const;
     int get_index_of_element(const int& index) const;
+    int get_reverse_index_of_element(const int& index, const int& proccess) const;
 };
 
 #endif // __PARALLEL_VECTOR_H__

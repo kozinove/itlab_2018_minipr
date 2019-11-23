@@ -103,3 +103,14 @@ int parallel_vector::get_index_of_element(const int& index) const {
     }
     return number_elem;
 }
+
+int parallel_vector::get_reverse_index_of_element(const int& index, const int& proccess)  const {
+    int number_elem;
+    if(proccess < allsize%sizeproc) {
+        number_elem = proccess*portion + index;
+    }
+    else {
+        number_elem = (allsize%sizeproc)*(portion+1) + (proccess-allsize%sizeproc)*portion + index;
+    }
+    return number_elem;
+}
