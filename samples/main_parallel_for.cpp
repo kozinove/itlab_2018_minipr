@@ -45,12 +45,12 @@ int main(int argc, char ** argv) {
     // if(rank == 0)
     //     std::cout<<"\n";
     // pf(3, 4, pv, [](int a){return a + 5;});
-    MPI_Barrier(MPI_COMM_WORLD);
-    for(int i = 0; i < n; i++) {
-        int ans = pv.get_elem(i);
-        if(rank == 0)
-            std::cout<<ans<<" ";
-    }
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // for(int i = 0; i < n; i++) {
+    //     int ans = pv.get_elem(i);
+    //     if(rank == 0)
+    //         std::cout<<ans<<" ";
+    // }
     if(rank == 0)
         std::cout<<"\n";
     double t1 = MPI_Wtime();

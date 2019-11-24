@@ -8,7 +8,7 @@
   // std::function<int(int, int)>reduction - ?
   // std::function<int(int, int, const parallel_vector&, int)> func - ?
 template<class Reduction>
-int reduce_operation(int ans, const Reduction& reduction, int proccess_begin, int process_end, int proccess = 0) { // check it!
+int reduce_operation(int ans, const Reduction& reduction, int proccess_begin, int process_end, int proccess = 0) {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
