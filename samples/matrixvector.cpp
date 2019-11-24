@@ -37,7 +37,8 @@ int main(int argc, char** argv) { // b*a
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    int n = 13, m = 10;
+    int n = atoi(argv[1]);
+    int m = atoi(argv[2]);
     parallel_vector a(n*m);
     //parallel_vector b(n);
     std::vector<int>b(n);
@@ -49,45 +50,14 @@ int main(int argc, char** argv) { // b*a
         // b.set_elem(i, i);
         b[i] = i;
     }
+    double t1 = MPI_Wtime();
     for(int i = 0; i < m; i++) {
-        // if(i != 2)
-        //     continue;
         int proccess = ans.get_index_of_proccess(i);
         int anss = parallel_reduce(i*n, (i+1)*n, a, 0, Func(a, b), Reduction(), proccess);
         ans.set_elem(i, anss);
     }
-    // for(int i = 0; i < n*m; i++) {
-    //     int anss = a.get_elem(i);
-    //     if(rank == 0) 
-    //         std::cout<<a.get_index_of_proccess(i)<<": "<<i<<" ("<<a.get_index_of_element(i)<<") - "<<anss<<"\n";
-    // }
-    for(int i = 0; i < m; i++) {
-        int anss = ans.get_elem(i);
-        if(rank == 0) {
-            std::cout<<anss<<" ";
-        }
-    }
-    if(rank == 0)
-        std::cout<<"\n";
-    if(rank == 0) {
-        std::vector<int>a(n*m);
-        std::vector<int>b(n);
-        std::vector<int>ans(m);
-        for(int i = 0; i < n*m; i++)
-            a[i] = i;
-        for(int i = 0; i < n; i++)
-            b[i] = i;
-        for(int j = 0; j < m; j++) {
-            ans[j] = 0;
-            for(int i = 0; i < n; i++) {
-                ans[j] += a[j*n+i]*b[i]; 
-            }
-        }
-        for(int i = 0; i < m; i++) {
-            std::cout<<ans[i]<<" ";
-        }
-        std::cout<<"\n";
-    }
+    double t2 = MPI_Wtime();
+    std::cout<<t2-t1;
     MPI_Finalize();
     return 0;
 }
