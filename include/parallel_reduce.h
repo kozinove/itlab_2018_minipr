@@ -8,7 +8,7 @@
   // std::function<int(int, int)>reduction - ?
   // std::function<int(int, int, const parallel_vector&, int)> func - ?
 template<class Reduction>
-int reduce_operation(int ans, const Reduction& reduction) { // check it!
+int reduce_operation(int ans, const Reduction& reduction, int proccess_begin, int process_end, int proccess = 0) { // check it!
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -16,18 +16,26 @@ int reduce_operation(int ans, const Reduction& reduction) { // check it!
     int n = 1;
     while(n < size)
         n *= 2;
+    int tmprank = (rank-proccess)%n + (rank-proccess < 0?n:0);
     for(int i = 1; i < n; i = i * 2) {
-        if((rank+1) * 2*i <= n) {
-            if(i == 1 && rank+n/2 >= size)
-                continue;
+        if(tmprank * 2*i < n) {
             MPI_Status status;
             int tmp;
-            MPI_Recv(&tmp, 1, MPI_INT, rank + n/(2*i), MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            tmpans = reduction(tmp, tmpans);
+            if(rank+n/(2*i) < size) {
+                int sender = (tmprank + n/(2*i) + proccess)%n;
+                if(sender >= size)
+                    continue;
+                MPI_Recv(&tmp, 1, MPI_INT, sender, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+                tmpans = reduction(tmp, tmpans);
+            }
         }
         else
         {
-            MPI_Send(&tmpans, 1, MPI_INT, rank - n/(2*i), 0, MPI_COMM_WORLD);
+            MPI_Request request;
+            int destination = (tmprank - n/(2*i) + proccess)%n;
+            if(destination >= size)
+                continue;
+            MPI_Isend(&tmpans, 1, MPI_INT, destination, 0, MPI_COMM_WORLD, &request);
             break;
         }        
     }
@@ -35,7 +43,7 @@ int reduce_operation(int ans, const Reduction& reduction) { // check it!
 }
 
 template<class Func, class Reduction>
-int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, const Func& func, const Reduction& reduction) {
+int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, const Func& func, const Reduction& reduction, int proccess = 0) {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -51,8 +59,7 @@ int parallel_reduce(int l, int r, const parallel_vector& pv, int identity, const
         ans = func(begin, end, identity);
     }
     //return ans;
-    // std::cout<<ans<<" "<<l<<" "<<r<<" | "<<proccess_begin<<" "<<proccess_end<<"\n";
-    return reduce_operation(ans, reduction);
+    return reduce_operation(ans, reduction, proccess_begin, proccess_end, proccess);
 }
 
 #endif // __PARALLEL_REDUCE_H__
