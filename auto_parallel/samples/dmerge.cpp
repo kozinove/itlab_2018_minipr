@@ -31,7 +31,7 @@ private:
     int size;
     bool res;
 public:
-    
+
     int layer;
 
     struct init_info: public init_info_base
@@ -128,6 +128,9 @@ public:
 class init_task: public task
 {
 public:
+    init_task(vector<message*>& mes_v) : task(mes_v)
+    { }
+
     init_task(vector<message*>& mes_v, vector<const message*>& c_mes_v) : task(mes_v, c_mes_v)
     { }
 
@@ -356,7 +359,7 @@ int main(int argc, char** argv)
     v.push_back(m1);
     v.push_back(m2);
     v.push_back(p);
-    init_task it(v, vector<const message*>());
+    init_task it(v);
     v.clear();
     v.push_back(m3);
     v.push_back(m2);

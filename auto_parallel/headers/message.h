@@ -93,27 +93,27 @@ namespace auto_parallel
     message_creator<Type>::~message_creator()
     { }
 
-    template<typename Type>
+    template<class Type>
     message* message_creator<Type>::get_message(message::init_info_base* info)
     {
-        Type::init_info* p = (Type::init_info*)info;
+        typename Type::init_info* p = dynamic_cast<typename Type::init_info*>(info);
         return new Type(p);
     }
 
     template<typename Type>
     message* message_creator<Type>::get_part_from(message* p, message::part_info_base* info)
     {
-        Type::part_info* q = (Type::part_info*)info;
+        typename Type::part_info* q = dynamic_cast<typename Type::part_info*>(info);
         return new Type(p, q);
     }
 
     template<typename Type>
     message::init_info_base* message_creator<Type>::get_init_info()
-    { return new Type::init_info; }
+    { return new typename Type::init_info; }
 
     template<typename Type>
     message::part_info_base* message_creator<Type>::get_part_info()
-    { return new Type::part_info; }
+    { return new typename Type::part_info; }
 
     template<typename Type>
     int message_creator<Type>::get_id()
@@ -126,13 +126,13 @@ namespace auto_parallel
     class message_factory
     {
     private:
-        
+
         static std::vector<message_creator_base*> v;
         static std::vector<message_creator_base*> v_part;
         message_factory();
 
     public:
-        
+
         template<typename Type>
         static void add();
 

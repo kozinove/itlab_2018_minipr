@@ -33,6 +33,12 @@ namespace auto_parallel
     task_environment::task_data task_environment::get_this_task_data()
     { return this_task; }
 
+    task::task()
+    { }
+
+    task::task(std::vector<message*>& mes_v): data(mes_v)
+    { }
+
     task::task(std::vector<message*>& mes_v, std::vector<const message*>& c_mes_v): data(mes_v), c_data(c_mes_v)
     { }
 

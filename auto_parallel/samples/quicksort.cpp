@@ -37,7 +37,7 @@ public:
 
         init_info()
         { size = 0; }
-        
+
         void send(const sender& se)
         { se.send(&size, 1, MPI_LONG_LONG); }
 
@@ -129,9 +129,12 @@ private:
 public:
     static int pred;
 
+    quick_task(vector<message*>& mes_v): task(mes_v)
+    { }
+
     quick_task(vector<message*>& mes_v, vector<const message*>& c_mes_v): task(mes_v, c_mes_v)
     { }
-    
+
     void perform(task_environment& env)
     {
         arrray& a1 = dynamic_cast<arrray&>(*data[0]);
@@ -196,6 +199,9 @@ int quick_task::pred = 1000;
 class init_task: public task
 {
 public:
+    init_task(vector<message*>& mes_v) : task(mes_v)
+    { }
+
     init_task(vector<message*>& mes_v, vector<const message*>& c_mes_v) : task(mes_v, c_mes_v)
     { }
 
@@ -225,16 +231,16 @@ public:
         arrray& a1 = dynamic_cast<arrray&>(*data[0]);
         arrray& a2 = dynamic_cast<arrray&>(*data[1]);
         double tm1 = MPI_Wtime();
-        /*sort(a2.p, a2.p + a2.size);
-        double tm2 = MPI_Wtime();
-        for (int i = 0; i < a1.size; ++i)
-            if (a1.p[i] != a2.p[i])
-            {
-                cout << "wrong\n";
-                goto gh;
-            }
-        cout << "correct\n";
-        gh:*/
+//        sort(a2.p, a2.p + a2.size);
+//        double tm2 = MPI_Wtime();
+//        for (int i = 0; i < a1.size; ++i)
+//            if (a1.p[i] != a2.p[i])
+//            {
+//                cout << "wrong\n";
+//                goto gh;
+//            }
+//        cout << "correct\n";
+        gh:
         cout << tm1 - t.time << '\n';
         //cout << tm2 - tm1;
         cout.flush();
@@ -267,11 +273,11 @@ int main(int argc, char** argv)
     time_cl* p = new time_cl;
     w[0] = p;
     v.push_back(new arrray(&ii));
-    quick_task qt(v, vector<const message*>());
+    quick_task qt(v);
     v.push_back(new arrray(&ii));
     check_task ct(v, w);
     v.push_back(p);
-    init_task it(v, vector<const message*>());
+    init_task it(v);
     tg.add_dependence(it, qt);
     tg.add_dependence(qt, ct);
     pz.init(tg);

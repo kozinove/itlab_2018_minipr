@@ -61,7 +61,7 @@ namespace auto_parallel
     class task_environment
     {
     public:
-        
+
         enum class message_source
         {
             TASK_ARG, TASK_ARG_C,
@@ -107,7 +107,7 @@ namespace auto_parallel
         std::vector<message_part_data> created_parts;
 
     public:
-        
+
         task_environment(task_data& td);
         task_environment(task_data&& td);
 
@@ -130,7 +130,7 @@ namespace auto_parallel
 
     template<class Type>
     int task_environment::create_task(task_environment::task_info* ti)
-    { 
+    {
         created_tasks.push_back({task_creator<Type>::get_id(), ti});
         return created_tasks.size() - 1;
     }
@@ -158,7 +158,9 @@ namespace auto_parallel
 
     public:
 
-        task(std::vector<message*>& mes_v = std::vector<message*>::vector(), std::vector<const message*>& c_mes_v = std::vector<const message*>::vector());
+        task();
+        task(std::vector<message*>& mes_v);
+        task(std::vector<message*>& mes_v, std::vector<const message*>& c_mes_v);
         virtual ~task();
 
         virtual void perform(task_environment& env) = 0;
@@ -176,7 +178,7 @@ namespace auto_parallel
     class task_factory
     {
     private:
-        
+
         static std::vector<task_creator_base*> v;
         task_factory();
 
@@ -186,7 +188,7 @@ namespace auto_parallel
         static void add();
 
         static task* get(size_t id, std::vector<message*>& data, std::vector<const message*>& c_data);
-        
+
     };
 
     template<typename Type>

@@ -5,8 +5,6 @@
 #include <queue>
 #include <map>
 #include <set>
-#include <iostream>
-#include <conio.h>
 #include "mpi.h"
 #include "parallel_core.h"
 #include "task_graph.h"
