@@ -3,24 +3,28 @@
 
 #include <map>
 #include <thread>
-#include "parallel_vector.h"
-
+#include <vector>
+#include <iostream>
 class memory_manager {
-    std::map<int, parallel_vector*> map_int_to_pointer;
-    std::map<parallel_vector*, int> map_pointer_to_int;
-    int number_of_objects;
+    std::vector<std::vector<int>>memory;
     std::thread helper_thr;
     int rank, size;
 public:
-    memory_manager(int argc, char** argv);
-    int get_data(parallel_vector* object, int index_of_element, int rank, int index_of_proccess); //int*???
-    void create_object(parallel_vector* object, int number_of_elements);
-    void delete_object(parallel_vector* object);
-    // int get_number_by_pointer(parallel_vector* pointer);
-    // parallel_vector* get_pointer_by_number(int number);
+    void memory_manager_init(int argc, char** argv);
+    int get_data(int key, int index_of_element); 
+    void set_data(int key, int index_of_element, int value);
+    int create_object(int number_of_elements);
+    // void delete_object(int key);
+    std::vector<int>& get_memory(int size);
+    // int get_number_by_pointer(int* pointer);
+    // int* get_pointer_by_number(int number);
+    std::pair<int, int> get_number_of_process_and_index(int key, int index);
+    void finalize();
     ~memory_manager();
-    void helper_thread();
+    friend void helper_thread();
 };
+
+extern memory_manager mm;
 
 void init(int argc, char** argv);
 
